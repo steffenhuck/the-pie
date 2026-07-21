@@ -64,8 +64,6 @@ svg{display:block}
 .caption b{color:var(--cream)}
 .caption .rosey{color:var(--rose)}
 .courses{display:flex;gap:6px;align-items:center}
-.plate{width:12px;height:12px;border-radius:50%;background:var(--rose);box-shadow:0 0 0 2px #d16d8a2e}
-.plate.spent{background:transparent;border:1px dashed var(--muted);box-shadow:none;opacity:.55}
 .servebtn{display:block;margin:2px auto 8px;background:var(--rose);color:#26101a;border:none;border-radius:999px;
   padding:9px 22px;font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.04em;cursor:pointer}
 .servebtn[hidden]{display:none}
@@ -75,6 +73,7 @@ svg{display:block}
 .log .row{display:flex;gap:9px;align-items:center;font-size:11.5px;color:var(--cream2)}
 .log .row svg{flex-shrink:0}
 .log .took{color:var(--rose)}
+.log .row.sharp{color:var(--almond)}
 
 /* publish */
 .pub{display:flex;flex-direction:column;gap:7px}
@@ -92,10 +91,7 @@ svg{display:block}
 .vcard{background:#241722;border:1px solid var(--edge);border-radius:14px;padding:24px 20px;max-width:350px;
   width:100%;text-align:center;box-shadow:0 24px 70px #000c}
 .vcard h2{font-family:var(--serif);font-weight:700;font-size:27px;margin:0}
-.vcard h2.ok{color:var(--ok)} .vcard h2.no{color:var(--no)} .vcard h2.rt{color:var(--rt)}
-.vcard .withdrawn{font-family:var(--serif);font-weight:700;font-size:20px;color:var(--no);margin:8px 0 0;
-  opacity:0;transition:opacity .6s}
-.vcard .withdrawn.show{opacity:1}
+.vcard h2.ok{color:var(--ok)} .vcard h2.no{color:var(--no)}
 .vcard p{font-family:var(--serif);font-size:14.5px;color:var(--cream2);line-height:1.55;margin:13px 0 20px}
 .vcard p b{color:var(--cream)}
 .vcard button{background:var(--rose);color:#26101a;border:none;border-radius:8px;padding:12px 26px;
@@ -109,7 +105,7 @@ svg{display:block}
 /* docket */
 .docket{display:flex;gap:5px;flex-wrap:wrap;min-height:12px}
 .dk{width:10px;height:10px;border-radius:50%}
-.dk.ok{background:var(--ok)} .dk.no{background:var(--no)} .dk.rt{background:var(--rt)}
+.dk.ok{background:var(--ok)} .dk.no{background:var(--no)}
 
 /* welcome */
 .welcome{position:fixed;inset:0;background:var(--bg);z-index:60;overflow-y:auto;
@@ -143,7 +139,7 @@ footer a{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--m
       <p>His choices are all you will ever learn — and the table keeps its own counsel: <b>no palate is marked off while you play</b>. The reckoning is yours; only the verdict shows who survived. Cut where the palates <span class="rosey">disagree</span> — a piece every palate would take teaches you nothing.</p>
       <p>Some pies keep their toppings tidy; others <b>mingle them</b> — and a pie that looks busier may say <i>less</i>.</p>
       <p>When you are ready, <b>name the palate</b> — or rule that <b>no cut of this pie can tell the survivors apart</b>. A proven limit is worth as much as a naming. Haste is worth nothing; neither is surrender while a telling cut remains.</p>
-      <p>Pies don’t keep. You have only so many courses.</p>
+      <p>The larder is deep: serve as many courses as you please. But a sharp knife names in <b>few</b> — the verdict counts your cuts against its.</p>
     </div>
     <button class="wplay" id="wPlay">SEAT THE GUEST</button>
     <footer><a href="https://steffenhuck.github.io" target="_blank" rel="noopener">steffen huck</a></footer>
@@ -182,7 +178,6 @@ footer a{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--m
 <div class="sheet" id="sheet">
   <div class="vcard">
     <h2 id="vHead">Named.</h2>
-    <div class="withdrawn" id="vWithdrawn">Withdrawn.</div>
     <p id="vText"></p>
     <button id="vNext">next dinner</button>
     <button id="vLook" class="look">look at the table</button>
@@ -247,56 +242,51 @@ function depthEff(pie,set){
   }
   return best;
 }
-/* can coursesLeft more cuts GUARANTEE a singleton? (pies are identical, so
-   every cut stays available every course) */
-function canFinish(pie,set,coursesLeft){
-  if(set.length<=1)return true;
-  if(coursesLeft<=0)return false;
-  const seen=new Set();
-  for(const c of ALLCUTS){
-    const sig=set.map(g=>outcome(pie,c,g.w)).join(',');
-    if(seen.has(sig))continue;seen.add(sig);
-    const groups=new Map();
-    for(const g of set){const o=outcome(pie,c,g.w);if(!groups.has(o))groups.set(o,[]);groups.get(o).push(g);}
-    if(groups.size<2)continue;
-    let ok=true;
-    for(const gr of groups.values())if(!canFinish(pie,gr,coursesLeft-1)){ok=false;break;}
-    if(ok)return true;
-  }
-  return false;
-}
-/* fewest cuts that (under the truth's actual choices) leave only the truth:
-   search subsets of signature classes */
-function minCutsFor(pie,guests,truth,cap){
+/* fewest cuts that (under the truth's actual choices) leave only the
+   truth, and one dinner achieving it: search subsets of signature
+   classes. n = Infinity (cuts = null) when the truth has a twin. */
+function minCutsSearch(pie,guests,truth,cap){
   const reps=[];const seen=new Set();
   for(const c of ALLCUTS){
     const sig=guests.map(g=>outcome(pie,c,g.w)).join(',');
     if(seen.has(sig))continue;seen.add(sig);reps.push(c);
   }
-  let best=Infinity;
-  const n=reps.length;
+  let best=Infinity,bestCuts=null;
   function rec(start,chosen){
     if(chosen.length>=best||chosen.length>cap)return;
     const surv=survivorsOf(pie,guests,truth,chosen);
-    if(surv.length===1&&surv[0]===truth){best=chosen.length;return;}
-    for(let k=start;k<n;k++){chosen.push(reps[k]);rec(k+1,chosen);chosen.pop();}
+    if(surv.length===1&&surv[0]===truth){best=chosen.length;bestCuts=chosen.slice();return;}
+    for(let k=start;k<reps.length;k++){chosen.push(reps[k]);rec(k+1,chosen);chosen.pop();}
   }
   rec(0,[]);
-  return best;
+  return {n:best,cuts:bestCuts};
 }
-function adjudicate(pie,guests,truth,cuts,courses,claim){
+/* first course index (0-based; Infinity if never) after which the
+   survivors were already a singleton: later courses changed nothing */
+function solvedAfter(pie,guests,truth,cuts){
+  for(let i=0;i<=cuts.length;i++)
+    if(survivorsOf(pie,guests,truth,cuts.slice(0,i)).length===1)return i;
+  return Infinity;
+}
+/* verdicts. The larder is deep — courses are unlimited — so budgets,
+   retraction and premature-by-exhaustion are gone: what remains is exact
+   and pairwise, as in g6. "No cut can tell them apart" is correct iff
+   some surviving pair are twins on this pie. */
+function adjudicate(pie,guests,truth,cuts,claim){
   const surv=survivorsOf(pie,guests,truth,cuts);
-  const left=courses-cuts.length;
   if(claim!=='NONID'){
-    if(surv.length===1&&surv[0].key===claim)
-      return {cat:'ACCEPT_GUEST',surv,used:cuts.length,min:minCutsFor(pie,guests,truth,courses)};
+    if(surv.length===1&&surv[0].key===claim){
+      const mc=minCutsSearch(pie,guests,truth,3);
+      return {cat:'ACCEPT_GUEST',surv,used:cuts.length,min:mc.n,minCuts:mc.cuts,
+        solvedAt:solvedAfter(pie,guests,truth,cuts)};
+    }
     if(surv.some(g=>g.key===claim))return {cat:'REJECT_NOTYET',surv};
     return {cat:'REJECT_WRONG',surv};
   }
   if(surv.length===1)return {cat:'REJECT_SOLVED',surv};
-  if(canFinish(pie,surv,left))return {cat:'REJECT_PREMATURE',surv};
-  const couldAtStart=canFinish(pie,guests,courses);
-  return {cat:couldAtStart?'ACCEPT_RETRACT':'ACCEPT_NONID',surv};
+  for(let i=0;i<surv.length;i++)for(let j=i+1;j<surv.length;j++)
+    if(!pairSep(pie,surv[i].w,surv[j].w))return {cat:'ACCEPT_NONID',surv};
+  return {cat:'REJECT_PREMATURE',surv};
 }
 /* guests: [wc, wa, ws] point scores */
 /* design rule (harness-enforced): no two guests may be proportional —
@@ -314,7 +304,8 @@ const GUESTS={
 };
 function guest(key){const g=GUESTS[key];return {key,w:g.w,name:g.name,say:g.say};}
 /* dinner templates: finite parameter menus so the harness can sweep every
-   table the game can ever set. courses = depthEff+1, always computed. */
+   table the game can ever set. depth (worst-case adaptive courses) is
+   recorded for the benchmark; courses themselves are unlimited. */
 const TEMPLATES7={
   ORCHARD:{ // cherries east, almonds west: everything separable
     params:{cd:[2,3],ad:[2,3]},
@@ -373,14 +364,13 @@ function enumerateAll7(){
     for(const params of expandParams(TEMPLATES7[tKey].params)){
       const b=TEMPLATES7[tKey].make(params);
       const guests=b.cast.map(guest);
-      const d=depthEff(b.pie,guests);
-      out.push({tKey,params,pie:b.pie,guests,courses:d+1});
+      out.push({tKey,params,pie:b.pie,guests,depth:depthEff(b.pie,guests)});
     }
   }
   return out;
 }
-const G7ENGINE={SECT,ALLCUTS,outcome,pairSep,proportional,survivorsOf,depthEff,canFinish,
-  minCutsFor,adjudicate,GUESTS,guest,TEMPLATES7,expandParams,enumerateAll7};
+const G7ENGINE={SECT,ALLCUTS,outcome,pairSep,proportional,survivorsOf,depthEff,
+  minCutsSearch,solvedAfter,adjudicate,GUESTS,guest,TEMPLATES7,expandParams,enumerateAll7};
 /*==G7-ENGINE-END==*/
 
 /* ---------------- presentation ---------------- */
@@ -422,20 +412,15 @@ function renderAll(){
       '<div class="gsay">'+g.say+'</div></div><span class="gone-tag">not them</span>';
     $('guests').appendChild(d);
   });
-  // plates
-  const left=D.pz.courses-D.cuts.length;
-  $('plates').innerHTML=Array.from({length:D.pz.courses},(_,i)=>
-    '<span class="plate'+(i<D.cuts.length?' spent':'')+'"></span>').join('')+
-    '<span style="font-size:10px;color:var(--muted)">'+left+' course'+(left===1?'':'s')+' left</span>';
+  $('plates').innerHTML='<span style="font-size:10px;color:var(--muted)">courses served: '+
+    D.cuts.length+' &middot; the larder is deep</span>';
   renderPie(D.proposed?{a:D.proposed.i,b:(D.proposed.i+D.proposed.len)%SECT}:null);
   if(D.phase==='cutting')
     $('caption').innerHTML=D.proposed
       ?'Your cut offers a choice: <b>the wedge</b> ('+pieceWords(D.pz.pie,D.proposed.i,D.proposed.len)+
         ') against <b>the rest</b> ('+pieceWords(D.pz.pie,(D.proposed.i+D.proposed.len)%SECT,SECT-D.proposed.len)+
         ').<br><span class="rosey">Put it to the guest &mdash; or draw a different cut.</span>'
-      :left>0
-      ?'Drag around the rim to cut a wedge <span class="rosey">&mdash; or set two fingers on the pie.</span>'
-      :'The kitchen is closed. Name the palate.';
+      :'Drag around the rim to cut a wedge <span class="rosey">&mdash; or set two fingers on the pie.</span>';
   $('cutBtn').hidden=!(D.phase==='cutting'&&D.proposed);
   $('serveBtn').hidden=true;
   renderPub();
@@ -560,7 +545,7 @@ function dragState(){
   if(ps.length===1)return anchor==null?null:{a:anchor,b:snap(ps[0])};
   return {a:snap(ps[0]),b:snap(ps[1])};
 }
-function canCut(){return D&&D.phase==='cutting'&&D.pz.courses-D.cuts.length>0;}
+function canCut(){return D&&D.phase==='cutting';}
 $('pie').addEventListener('pointerdown',ev=>{
   if(!canCut())return;
   ev.preventDefault();
@@ -618,9 +603,7 @@ function commitCut(cut){
     (side===1?'<span class="took">took the wedge</span>':side===-1?'<span class="took">took the rest</span>':'shrugged')+
     ' &middot; wedge held '+w+'</span>';
   $('log').appendChild(row);
-  const left=D.pz.courses-D.cuts.length;
-  $('serveBtn').hidden=left<=0;
-  if(left<=0)D.phase='cutting'; // nothing more to serve; publishing time
+  $('serveBtn').hidden=false; // another identical pie always waits
 }
 function miniPie(cut,side){
   const r=13,cx=15,cy=15;
@@ -657,44 +640,64 @@ function renderPub(){
 }
 const nameOf=key=>D.guests.find(g=>g.key===key).name;
 const letterOf=key=>'ABC'[D.guests.findIndex(g=>g.key===key)];
+/* the sharp knife's dinner: lay an optimal cut sequence under the log,
+   with the guest's actual responses, using the same mini-pie language */
+function layKnife(witness){
+  if(!witness||!witness.length)return;
+  const h=document.createElement('div');h.className='row sharp';
+  h.innerHTML='<span style="font-style:italic">the sharp knife’s dinner &mdash; '+
+    witness.length+' course'+(witness.length===1?'':'s')+':</span>';
+  $('log').appendChild(h);
+  witness.forEach((cut,k)=>{
+    const side=outcome(D.pz.pie,cut,D.truth.w);
+    const row=document.createElement('div');row.className='row sharp';
+    row.innerHTML=miniPie(cut,side)+'<span>course '+(k+1)+': '+
+      (side===1?'he takes the wedge':side===-1?'he takes the rest':'he shrugs')+
+      ' &middot; wedge held '+pieceWords(D.pz.pie,cut.i,cut.len)+'</span>';
+    $('log').appendChild(row);
+  });
+}
 function publish(claim){
-  const res=adjudicate(D.pz.pie,D.guests,D.truth,D.cuts,D.pz.courses,claim);
-  D.revealed=true;
+  const res=adjudicate(D.pz.pie,D.guests,D.truth,D.cuts,claim);
+  D.revealed=true;D.phase='done';
   renderAll();
-  const head=$('vHead'),text=$('vText'),wd=$('vWithdrawn');
-  wd.classList.remove('show');wd.style.display='none';
+  const head=$('vHead'),text=$('vText');
   let dk='no';
+  const knifeForRejects=()=>{ // show how it could have been done, if it could
+    const mc=minCutsSearch(D.pz.pie,D.guests,D.truth,3);
+    if(Number.isFinite(mc.n))layKnife(mc.cuts);
+  };
   if(res.cat==='ACCEPT_GUEST'){
     dk='ok';head.textContent='Named.';head.className='ok';
     const X=res.used,Y=res.min;
-    if(X>Y)text.innerHTML='He is indeed <b>'+nameOf(claim)+'</b>. You needed '+X+' courses; a sharper knife needed <b>'+Y+'</b>.';
-    else text.innerHTML='He is indeed <b>'+nameOf(claim)+'</b> &mdash; named in <b>'+X+'</b> course'+(X===1?'':'s')+', the fewest possible.';
+    let t='He is indeed <b>'+nameOf(claim)+'</b> &mdash; named in <b>'+X+'</b> course'+(X===1?'':'s')+'.';
+    if(Y<X){t+=' A sharper knife needed <b>'+Y+'</b> &mdash; its dinner is laid beneath yours on the table.';layKnife(res.minCuts);}
+    else t+=' That is the fewest possible.';
+    if(Number.isFinite(res.solvedAt)&&X>res.solvedAt)
+      t+=' The table was already decided after course '+res.solvedAt+' &mdash; the last '+(X-res.solvedAt)+' changed nothing.';
+    text.innerHTML=t;
   }else if(res.cat==='ACCEPT_NONID'){
     dk='ok';head.textContent='Named.';head.className='ok';
     text.innerHTML='Correct &mdash; and it is the pie’s fault, not yours. However you cut <b>this</b> pie, the remaining palates would always reach for the same piece. Where the data carry no variation, no appetite for truth can help. <b>Knowing the limit is knowledge.</b>';
-  }else if(res.cat==='ACCEPT_RETRACT'){
-    dk='rt';head.textContent='Named.';head.className='rt';
-    text.innerHTML='True: with the courses now gone, the remaining palates cannot be told apart.';
-    wd.style.display='block';
-    setTimeout(()=>{wd.classList.add('show');
-      text.innerHTML='But this pie could have told them apart &mdash; telling cuts existed all along. Your courses went to pieces every palate wanted alike. The dinner is over because you served it away.';
-    },1500);
   }else if(res.cat==='REJECT_NOTYET'){
     head.textContent='Refused.';head.className='no';
     const other=res.surv.find(g=>g.key!==claim);
     text.innerHTML='<b>'+nameOf(claim)+'</b> would indeed have chosen exactly so &mdash; but so would <b>'+
       nameOf(other.key)+'</b> ('+letterOf(other.key)+'). A palate that fits is not a palate identified.';
+    knifeForRejects();
   }else if(res.cat==='REJECT_WRONG'){
     head.textContent='Refused.';head.className='no';
     text.innerHTML='The choices at this table contradict you. Still seated: '+
       res.surv.map(g=>'<b>'+g.name+'</b>').join(', ')+'.';
+    knifeForRejects();
   }else if(res.cat==='REJECT_SOLVED'){
     head.textContent='Refused.';head.className='no';
     text.innerHTML='Cannot be told apart? The table has already spoken: only <b>'+res.surv[0].name+
       '</b> ('+letterOf(res.surv[0].key)+') chooses like your guest. Look at who is left before ruling that no one can be.';
   }else{
     head.textContent='Refused.';head.className='no';
-    text.innerHTML='A telling cut of this pie still exists, and courses remain. No host may declare the dinner unknowable while the kitchen is open.';
+    text.innerHTML='A telling cut of this pie still exists, and the larder is deep. No host may declare the dinner unknowable while a cut can still speak. Its dinner is laid on the table.';
+    knifeForRejects();
   }
   docket.push(dk);
   $('docket').innerHTML=docket.map(k=>'<span class="dk '+k+'"></span>').join('');
