@@ -73,6 +73,7 @@ svg{display:block}
 .log .row{display:flex;gap:9px;align-items:center;font-size:11.5px;color:var(--cream2)}
 .log .row svg{flex-shrink:0}
 .log .took{color:var(--rose)}
+.log .refused{opacity:.72}
 .log .row.sharp{color:var(--muted);font-style:italic}
 
 /* publish */
@@ -673,8 +674,14 @@ function commitCut(cut){
   // log row with mini pie
   const row=document.createElement('div');row.className='row';
   row.innerHTML=miniPie(cut,side)+'<span>course '+D.cuts.length+': '+
-    (side===1?'<span class="took">took the wedge</span>':side===-1?'<span class="took">took the rest</span>':'shrugged')+
-    ' &middot; wedge: '+w+' &middot; rest: '+rest+'</span>';
+    (side===1
+      ?'<span class="took">took the wedge</span>: '+w+
+        '<br><span class="refused">refused the rest: '+rest+'</span>'
+      :side===-1
+      ?'<span class="took">took the rest</span>: '+rest+
+        '<br><span class="refused">refused the wedge: '+w+'</span>'
+      :'shrugged &mdash; wedge: '+w+
+        '<br><span class="refused">exactly equal to the rest: '+rest+'</span>')+'</span>';
   $('log').appendChild(row);
   $('serveBtn').hidden=false; // another identical pie always waits
 }
@@ -725,11 +732,15 @@ function layKnife(witness,headline){
   $('log').appendChild(h);
   witness.forEach((cut,k)=>{
     const side=outcome(D.pie,cut,D.truth);
+    const w=pieceWords(D.pie,cut.i,cut.len);
+    const rest=pieceWords(D.pie,(cut.i+cut.len)%SECT,SECT-cut.len);
     const row=document.createElement('div');row.className='row sharp';
     row.innerHTML=miniPie(cut,side)+'<span>course '+(k+1)+': '+
-      (side===1?'he takes the wedge':side===-1?'he takes the rest':'he shrugs')+
-      ' &middot; wedge: '+pieceWords(D.pie,cut.i,cut.len)+
-      ' &middot; rest: '+pieceWords(D.pie,(cut.i+cut.len)%SECT,SECT-cut.len)+'</span>';
+      (side===1
+        ?'he takes the wedge: '+w+'<br><span class="refused">and refuses the rest: '+rest+'</span>'
+        :side===-1
+        ?'he takes the rest: '+rest+'<br><span class="refused">and refuses the wedge: '+w+'</span>'
+        :'he shrugs &mdash; wedge: '+w+'<br><span class="refused">exactly equal to the rest: '+rest+'</span>')+'</span>';
     $('log').appendChild(row);
   });
 }
