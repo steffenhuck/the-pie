@@ -139,14 +139,14 @@ footer a{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--m
     <h1>The Pie</h1>
     <div class="tagline">a game of cuts and appetites</div>
     <div class="prose">
-      <p>A guest has come to dinner, and you have baked <b>identical pies</b> — cherries here, almonds there, cake everywhere. You know the guest is one of the <b>palates seated</b> — three, or on grand evenings four — each precise to the point. You do not know which.</p>
-      <p>Each course, cut one wedge: <b>drag a finger around the rim</b> — or set <b>two fingers</b> on the pie at once. A cut offers a choice &mdash; wedge against rest &mdash; and nothing reaches the table until you <b>put that choice to the guest</b>, so redraw as often as you like. Once served, he takes whichever piece he scores higher; if the pieces tie, he <b>shrugs</b> and you see that too.</p>
+      <p><b>The Count is coming to dinner.</b> The silver is polished, the ovens have run since dawn, and your pantry holds a line of <b>identical pies</b> — cherries here, almonds there, cake everywhere. One thing is whispered of the Count wherever he dines: <b>he counts</b>. Every palate he might harbour is written on the cards below — three, or on grand evenings four — each precise to the point. Which is truly his, no one in the kitchen knows.</p>
+      <p>Each course, cut one wedge: <b>drag a finger around the rim</b> — or set <b>two fingers</b> on the pie at once. A cut offers a choice &mdash; wedge against rest &mdash; and nothing reaches the table until you <b>put that choice to the Count</b>, so redraw as often as you like. Once served, he takes whichever piece he scores higher; if the pieces tie, he <b>shrugs</b> and you see that too.</p>
       <p>His choices are all you will ever learn — and the table keeps its own counsel: <b>no palate is marked off while you play</b>. The reckoning is yours; only the verdict shows who survived. Cut where the palates <span class="rosey">disagree</span> — a piece every palate would take teaches you nothing.</p>
       <p>Some pies keep their toppings tidy; others <b>mingle them</b> — and a pie that looks busier may say <i>less</i>.</p>
       <p>When you are ready, <b>name the palate</b> — or rule that <b>no cut of this pie can tell the survivors apart</b>. A proven limit is worth as much as a naming. Haste is worth nothing; neither is surrender while a telling cut remains.</p>
       <p>The larder is deep: serve as many courses as you please. But a sharp knife names in <b>few</b> — the verdict counts your cuts against its.</p>
     </div>
-    <button class="wplay" id="wPlay">SEAT THE GUEST</button>
+    <button class="wplay" id="wPlay">SEAT THE COUNT</button>
     <footer><a href="https://steffenhuck.github.io" target="_blank" rel="noopener">steffen huck</a></footer>
   </div>
 </div>
@@ -154,7 +154,7 @@ footer a{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--m
 <div class="wrap">
   <header>
     <h1>The Pie</h1>
-    <div class="sub">whose appetite is at your table?</div>
+    <div class="sub">the count is at your table &mdash; but which count?</div>
   </header>
 
   <div class="sec"><span id="palLabel">the palates</span><span id="dinnerNo"></span></div>
@@ -164,7 +164,7 @@ footer a{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--m
   <div class="table" id="tableBox">
     <div class="piewrap"><svg id="pie" width="330" height="330" viewBox="0 0 330 330"></svg></div>
     <div class="caption" id="caption"></div>
-    <button class="servebtn" id="cutBtn" hidden>put the choice to the guest</button>
+    <button class="servebtn" id="cutBtn" hidden>put the choice to the count</button>
     <button class="servebtn" id="serveBtn" hidden>next course &mdash; same bake</button>
   </div>
 
@@ -568,7 +568,7 @@ function renderAll(){
     $('caption').innerHTML=D.proposed
       ?'Your cut offers a choice: <b>the wedge</b> ('+pieceWords(D.pie,D.proposed.i,D.proposed.len)+
         ') against <b>the rest</b> ('+pieceWords(D.pie,(D.proposed.i+D.proposed.len)%SECT,SECT-D.proposed.len)+
-        ').<br><span class="rosey">Put it to the guest &mdash; or draw a different cut.</span>'
+        ').<br><span class="rosey">Put it to the Count &mdash; or draw a different cut.</span>'
       :'Drag around the rim to cut a wedge <span class="rosey">&mdash; or set two fingers on the pie.</span>';
   $('cutBtn').hidden=!(D.phase==='cutting'&&D.proposed);
   $('serveBtn').hidden=true;
@@ -742,10 +742,10 @@ function commitCut(cut){
   const w=pieceWords(pie,cut.i,cut.len);
   const rest=pieceWords(pie,(cut.i+cut.len)%SECT,SECT-cut.len);
   $('caption').innerHTML=side===1
-    ?'The guest takes <b>the wedge</b> <span class="rosey">('+w+')</span> and leaves the rest ('+rest+').'
+    ?'The Count takes <b>the wedge</b> <span class="rosey">('+w+')</span> and leaves the rest ('+rest+').'
     :side===-1
-    ?'The guest waves the wedge away ('+w+') and takes <b>the rest</b> <span class="rosey">('+rest+')</span>.'
-    :'The guest <b>shrugs</b> &mdash; the wedge ('+w+') and the rest ('+rest+') please him exactly alike.';
+    ?'The Count waves the wedge away ('+w+') and takes <b>the rest</b> <span class="rosey">('+rest+')</span>.'
+    :'The Count <b>shrugs</b> &mdash; the wedge ('+w+') and the rest ('+rest+') please him exactly alike.';
   // log row with mini pie
   const row=document.createElement('div');row.className='row';
   const taken=side===1?w:rest, refused=side===1?rest:w;
@@ -851,7 +851,7 @@ function publish(claim){
     text.innerHTML=(N===0
       ?'<b>'+nameOf(claim)+'</b> fits &mdash; but you have served nothing, and every palate fits an empty table.'
       :'Check your ledger: at <b>every one of your '+N+' course'+(N===1?'':'s')+'</b>, <b>'+nameOf(claim)+
-       '</b> would have reached for exactly the piece the guest took &mdash; piece for piece.')+
+       '</b> would have reached for exactly the piece the Count took &mdash; piece for piece.')+
       ' But so would <b>'+nameOf(other.key)+'</b> ('+letterOf(other.key)+
       '). A palate that fits is not a palate identified.';
     knifeForRejects();
@@ -863,7 +863,7 @@ function publish(claim){
   }else if(res.cat==='REJECT_SOLVED'){
     head.textContent='Refused.';head.className='no';
     text.innerHTML='Cannot be told apart? The table has already spoken: only <b>'+res.surv[0].name+
-      '</b> ('+letterOf(res.surv[0].key)+') chooses like your guest. Look at who is left before ruling that no one can be.';
+      '</b> ('+letterOf(res.surv[0].key)+') chooses like the Count. Look at who is left before ruling that no one can be.';
   }else{
     head.textContent='Refused.';head.className='no';
     text.innerHTML='A telling cut of this pie still exists, and the larder is deep. No host may declare the dinner unknowable while a cut can still speak. Its dinner is laid on the table.';
