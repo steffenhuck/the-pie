@@ -216,6 +216,14 @@ function outcome(pie,cut,w){
 }
 /* two guests are twins on this pie iff they choose alike at EVERY cut */
 function pairSep(pie,w1,w2){return ALLCUTS.some(c=>outcome(pie,c,w1)!==outcome(pie,c,w2));}
+/* proportional point-sheets choose alike on EVERY pie, not just this one:
+   the sign of a scaled utility difference never moves. Detected exactly on
+   integers via vanishing cross-products plus shared direction. */
+function proportional(w1,w2){
+  for(let i=0;i<3;i++)for(let j=0;j<3;j++)
+    if(w1[i]*w2[j]!==w1[j]*w2[i])return false;
+  return w1.some((v,i)=>v*w2[i]>0);
+}
 function survivorsOf(pie,guests,truth,cuts){
   return guests.filter(g=>cuts.every(c=>outcome(pie,c,g.w)===outcome(pie,c,truth.w)));
 }
@@ -377,7 +385,7 @@ function enumerateAll7(){
   }
   return out;
 }
-const G7ENGINE={SECT,ALLCUTS,outcome,pairSep,survivorsOf,depthEff,canFinish,
+const G7ENGINE={SECT,ALLCUTS,outcome,pairSep,proportional,survivorsOf,depthEff,canFinish,
   minCutsFor,adjudicate,GUESTS,guest,TEMPLATES7,expandParams,enumerateAll7};
 /*==G7-ENGINE-END==*/
 
@@ -665,7 +673,14 @@ function publish(claim){
     else text.innerHTML='He is indeed <b>'+nameOf(claim)+'</b> &mdash; named in <b>'+X+'</b> course'+(X===1?'':'s')+', the fewest possible.';
   }else if(res.cat==='ACCEPT_NONID'){
     dk='ok';head.textContent='Named.';head.className='ok';
-    text.innerHTML='Correct &mdash; and it is the pie’s fault, not yours. However you cut <b>this</b> pie, the remaining palates would always reach for the same piece. Where the data carry no variation, no appetite for truth can help. <b>Knowing the limit is knowledge.</b>';
+    let scalePair=null;
+    for(let i=0;i<res.surv.length&&!scalePair;i++)for(let j=i+1;j<res.surv.length;j++)
+      if(!pairSep(D.pz.pie,res.surv[i].w,res.surv[j].w)&&proportional(res.surv[i].w,res.surv[j].w))
+        {scalePair=[res.surv[i],res.surv[j]];break;}
+    text.innerHTML=scalePair
+      ?'Correct &mdash; and here not even a better pie could save you. <b>'+scalePair[0].name+'</b> and <b>'+
+        scalePair[1].name+'</b> score every piece in proportion: one point-sheet is the other, rescaled. Choices reveal only the <i>order</i> of appetites, never their strength &mdash; the two would choose alike on <b>any pie ever baked</b>. <b>Knowing the limit is knowledge.</b>'
+      :'Correct &mdash; and it is the pie’s fault, not yours. However you cut <b>this</b> pie, the remaining palates would always reach for the same piece. Where the data carry no variation, no appetite for truth can help. <b>Knowing the limit is knowledge.</b>';
   }else if(res.cat==='ACCEPT_RETRACT'){
     dk='rt';head.textContent='Named.';head.className='rt';
     text.innerHTML='True: with the courses now gone, the remaining palates cannot be told apart.';
