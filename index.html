@@ -139,7 +139,7 @@ footer a{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--m
     <div class="tagline">a game of cuts and appetites</div>
     <div class="prose">
       <p>A guest has come to dinner, and you have baked <b>identical pies</b> — cherries here, almonds there, cake everywhere. You know the guest is one of <b>three palates</b>, each precise to the point. You do not know which.</p>
-      <p>Each course, cut one wedge: <b>drag a finger around the rim</b> — or set <b>two fingers</b> on the pie at once. Nothing reaches the table until you <b>serve the cut</b>, so redraw as often as you like. Once served, the guest takes whichever piece he scores higher; if the pieces tie, he <b>shrugs</b> and you see that too.</p>
+      <p>Each course, cut one wedge: <b>drag a finger around the rim</b> — or set <b>two fingers</b> on the pie at once. A cut offers a choice &mdash; wedge against rest &mdash; and nothing reaches the table until you <b>put that choice to the guest</b>, so redraw as often as you like. Once served, he takes whichever piece he scores higher; if the pieces tie, he <b>shrugs</b> and you see that too.</p>
       <p>His choices are all you will ever learn. Cut where the palates <span class="rosey">disagree</span> — a piece every palate would take teaches you nothing.</p>
       <p>When you are ready, <b>name the palate</b> — or rule that <b>no cut of this pie can tell the survivors apart</b>. A proven limit is worth as much as a naming. Haste is worth nothing; neither is surrender while a telling cut remains.</p>
       <p>Pies don’t keep. You have only so many courses.</p>
@@ -162,7 +162,7 @@ footer a{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--m
   <div class="table" id="tableBox">
     <div class="piewrap"><svg id="pie" width="330" height="330" viewBox="0 0 330 330"></svg></div>
     <div class="caption" id="caption"></div>
-    <button class="servebtn" id="cutBtn" hidden>serve this cut</button>
+    <button class="servebtn" id="cutBtn" hidden>put the choice to the guest</button>
     <button class="servebtn" id="serveBtn" hidden>serve the next pie</button>
   </div>
 
@@ -398,8 +398,9 @@ function renderAll(){
   renderPie(D.proposed?{a:D.proposed.i,b:(D.proposed.i+D.proposed.len)%SECT}:null);
   if(D.phase==='cutting')
     $('caption').innerHTML=D.proposed
-      ?'The knife rests on a wedge of <b>'+pieceWords(D.pz.pie,D.proposed.i,D.proposed.len)+
-        '</b>.<br><span class="rosey">Serve it &mdash; or draw a different cut.</span>'
+      ?'Your cut offers a choice: <b>the wedge</b> ('+pieceWords(D.pz.pie,D.proposed.i,D.proposed.len)+
+        ') against <b>the rest</b> ('+pieceWords(D.pz.pie,(D.proposed.i+D.proposed.len)%SECT,SECT-D.proposed.len)+
+        ').<br><span class="rosey">Put it to the guest &mdash; or draw a different cut.</span>'
       :left>0
       ?'Drag around the rim to cut a wedge <span class="rosey">&mdash; or set two fingers on the pie.</span>'
       :'The kitchen is closed. Name the palate.';
