@@ -327,6 +327,48 @@ const GUESTS={
 function guest(key){const g=GUESTS[key];
   const u=g.u||((C,A,S)=>g.w[0]*C+g.w[1]*A+g.w[2]*S);
   return {key,u,w:g.w||null,name:g.name,say:g.say};}
+/* the potluck: a pie library crossed with a cast library, machine-
+   filtered at load to tables worth setting — a trap cut must exist and
+   some pair must be separable. Verdicts never depended on hand-tiering
+   (identifiability is computed per board), so the whole filtered space
+   is exactly adjudicated, enumerable, and harness-swept like any
+   template. Deterministic: same boards on every load. */
+const PIELIB=[
+  {c:[3,2,2,1,0,0,0,0,0,0,0,1],a:[0,0,0,0,1,3,2,2,1,0,0,0]}, // twin orchards
+  {c:[1,0,2,0,0,1,0,2,0,1,0,0],a:[0,2,0,1,0,2,0,0,1,0,1,0]}, // scattered medley
+  {c:[2,0,1,0,2,0,1,0,0,0,0,0],a:[0,1,0,2,0,1,0,2,0,0,0,0]}, // weave
+  {c:[3,2,1,0,0,0,1,0,0,0,0,0],a:[0,1,2,3,0,0,1,0,0,2,0,0]}, // sloping balance
+  {c:[3,3,1,0,0,0,0,0,0,0,0,0],a:[0,1,0,0,2,0,0,1,0,0,1,0]}, // cherry pocket
+  {c:[3,2,0,0,0,1,0,0,0,0,0,0],a:[0,0,0,2,3,0,0,0,1,0,0,0]}, // rival camps
+  {c:[3,0,0,3,0,0,0,0,0,0,0,0],a:[0,0,2,0,0,2,0,0,1,0,0,1]}, // twin pockets
+  {c:[3,2,1,1,0,0,0,0,0,0,1,2],a:[0,0,1,2,3,2,1,0,0,0,0,0]}, // gradient
+  {c:[2,3,3,1,0,0,0,0,0,0,0,0],a:[2,3,3,1,0,0,0,0,0,0,0,0]}, // collinear ridge
+  {c:[3,1,0,2,0,0,0,1,0,0,0,0],a:[3,1,0,2,0,0,0,1,0,0,0,0]}, // collinear scatter
+];
+const CASTLIB=[
+  ['SWEET','CHERRY','GOURMAND'],['SWEET','ALMOND','GOURMAND'],
+  ['HARMONIST','CHERRY','ALMOND'],['PURIST','CHERRY','ALMOND'],
+  ['HARMONIST','SWEET','CHERRY'],['PURIST','SWEET','GOURMAND'],
+  ['FANCHERRY','CHERRY','SWEET'],['FANALMOND','ALMOND','SWEET'],
+  ['FANCHERRY','ALMOND','GOURMAND'],['FANALMOND','CHERRY','GOURMAND'],
+  ['ASCETIC','HARMONIST','SWEET'],['ASCETIC','CHERRY','ALMOND'],
+];
+const POTLUCKS=(()=>{
+  const out=[];
+  for(const pie of PIELIB)for(const cast of CASTLIB){
+    const gs=cast.map(guest);
+    let dom=false;
+    for(const c of ALLCUTS){const os=gs.map(g=>outcome(pie,c,g));
+      if(os.every(o=>o===os[0]&&o!==0)){dom=true;break;}}
+    if(!dom)continue; // the visible trap must exist
+    let sep=false;
+    for(let i=0;i<3&&!sep;i++)for(let j=i+1;j<3;j++)
+      if(pairSep(pie,gs[i],gs[j])){sep=true;break;}
+    if(!sep)continue; // something must be learnable
+    out.push({pie,cast});
+  }
+  return out;
+})();
 /* dinner templates: finite parameter menus so the harness can sweep every
    table the game can ever set. depth (worst-case adaptive courses) is
    recorded for the benchmark; courses themselves are unlimited. */
@@ -432,6 +474,11 @@ const TEMPLATES7={
     make:o=>{const pat=o.v===0?[2,2,1,1,0,0,0,0,0,0,0,0]:[3,1,0,2,0,0,0,0,0,0,0,0];
       return {pie:{c:pat.slice(),a:pat.slice()},cast:['HARMONIST','PURIST','GOURMAND']};}
   },
+  POTLUCK:{ adv:true, // the open kitchen: every filtered pie x cast pairing
+    params:{v:POTLUCKS.map((_,i)=>i)},
+    make:o=>({pie:{c:POTLUCKS[o.v].pie.c.slice(),a:POTLUCKS[o.v].pie.a.slice()},
+      cast:POTLUCKS[o.v].cast.slice()})
+  },
 };
 /* a dealt pie is a rotation (and possibly a mirror) of a catalogue pie:
    the cut space is closed under both, so every identification fact —
@@ -476,14 +523,17 @@ const ALLDINNERS=enumerateAll7();
 let D=null,dinnerNo=0;
 const docket=[];
 function rand(a){return a[Math.floor(Math.random()*a.length)];}
-const BASICDINNERS=ALLDINNERS.filter(d=>!TEMPLATES7[d.tKey].adv);
-const ADVDINNERS=ALLDINNERS.filter(d=>TEMPLATES7[d.tKey].adv);
+const STORYDINNERS=ALLDINNERS.filter(d=>d.tKey!=='POTLUCK');
+const POTDINNERS=ALLDINNERS.filter(d=>d.tKey==='POTLUCK');
+const BASICDINNERS=STORYDINNERS.filter(d=>!TEMPLATES7[d.tKey].adv);
+const ADVDINNERS=STORYDINNERS.filter(d=>TEMPLATES7[d.tKey].adv);
 function newDinner(){
   dinnerNo++;
-  // early dinners lean tidy, but a mingled pie may arrive at any time
+  // early dinners lean tidy; later the potluck shares the table equally
+  // with the story boards, so neither crowds the other out
   const pz=dinnerNo<=2
     ?(Math.random()<0.2?rand(ADVDINNERS):rand(BASICDINNERS))
-    :rand(ALLDINNERS);
+    :(Math.random()<0.45?rand(POTDINNERS):rand(STORYDINNERS));
   const guests=pz.guests.slice().sort(()=>Math.random()-0.5);
   // each dinner bakes its pie in a fresh orientation — same facts, new look
   const pie=orientPie(pz.pie,Math.floor(Math.random()*SECT),Math.random()<0.5);
@@ -496,7 +546,8 @@ function newDinner(){
 }
 function survNow(){return survivorsOf(D.pie,D.guests,D.truth,D.cuts);}
 function renderAll(){
-  $('dinnerNo').textContent='dinner no. '+dinnerNo+(TEMPLATES7[D.pz.tKey].adv?' · an advanced pie':'');
+  $('dinnerNo').textContent='dinner no. '+dinnerNo+
+    (D.pz.tKey==='POTLUCK'?' · a potluck pie':TEMPLATES7[D.pz.tKey].adv?' · an advanced pie':'');
   $('palLabel').textContent='the '+(D.guests.length===4?'four':'three')+' palates';
   // hardcore: no palate is struck off while you play — only the verdict reveals
   const surv=D.revealed?survNow():D.guests;
