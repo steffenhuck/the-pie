@@ -139,8 +139,8 @@ footer a{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--m
     <div class="tagline">a game of cuts and appetites</div>
     <div class="prose">
       <p>A guest has come to dinner, and you have baked <b>identical pies</b> — cherries here, almonds there, cake everywhere. You know the guest is one of <b>three palates</b>, each precise to the point. You do not know which.</p>
-      <p>Each course, cut one wedge: <b>drag a finger around the rim</b> — or set <b>two fingers</b> on the pie at once. The guest takes whichever piece it scores higher; if the pieces tie, it <b>shrugs</b> and you see that too.</p>
-      <p>Its choices are all you will ever learn. Cut where the palates <span class="rosey">disagree</span> — a piece every palate would take teaches you nothing.</p>
+      <p>Each course, cut one wedge: <b>drag a finger around the rim</b> — or set <b>two fingers</b> on the pie at once. Nothing reaches the table until you <b>serve the cut</b>, so redraw as often as you like. Once served, the guest takes whichever piece he scores higher; if the pieces tie, he <b>shrugs</b> and you see that too.</p>
+      <p>His choices are all you will ever learn. Cut where the palates <span class="rosey">disagree</span> — a piece every palate would take teaches you nothing.</p>
       <p>When you are ready, <b>name the palate</b> — or rule that <b>no cut of this pie can tell the survivors apart</b>. A proven limit is worth as much as a naming. Haste is worth nothing; neither is surrender while a telling cut remains.</p>
       <p>Pies don’t keep. You have only so many courses.</p>
     </div>
@@ -162,6 +162,7 @@ footer a{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--m
   <div class="table" id="tableBox">
     <div class="piewrap"><svg id="pie" width="330" height="330" viewBox="0 0 330 330"></svg></div>
     <div class="caption" id="caption"></div>
+    <button class="servebtn" id="cutBtn" hidden>serve this cut</button>
     <button class="servebtn" id="serveBtn" hidden>serve the next pie</button>
   </div>
 
@@ -295,7 +296,7 @@ const GUESTS={
   MODEST:{w:[0,0,1],name:'The Modest',
     say:'Counts cake and cake alone: one point a slice. Toppings are beneath notice.'},
   SWEET:{w:[1,1,0],name:'The Sweet Tooth',
-    say:'A point for every topping, cherry or almond alike. The cake itself bores them.'},
+    say:'A point for every topping, cherry or almond alike. The cake itself bores him.'},
   CHERRY:{w:[2,1,1],name:'The Cherry Devotee',
     say:'Two points a cherry, one an almond, one a slice of cake.'},
   ALMOND:{w:[1,2,1],name:'The Almond Devotee',
@@ -370,7 +371,7 @@ function newDinner(){
   const pz=rand(ALLDINNERS);
   const guests=pz.guests.slice().sort(()=>Math.random()-0.5);
   D={pz,guests,truth:rand(guests),cuts:[],phase:'cutting', // cutting | served | done
-     lastResult:null};
+     proposed:null,lastResult:null};
   $('sheet').classList.remove('show');
   $('floatNew').classList.remove('show');
   $('log').innerHTML='';
@@ -394,11 +395,15 @@ function renderAll(){
   $('plates').innerHTML=Array.from({length:D.pz.courses},(_,i)=>
     '<span class="plate'+(i<D.cuts.length?' spent':'')+'"></span>').join('')+
     '<span style="font-size:10px;color:var(--muted)">'+left+' course'+(left===1?'':'s')+' left</span>';
-  renderPie(null);
+  renderPie(D.proposed?{a:D.proposed.i,b:(D.proposed.i+D.proposed.len)%SECT}:null);
   if(D.phase==='cutting')
-    $('caption').innerHTML=left>0
+    $('caption').innerHTML=D.proposed
+      ?'The knife rests on a wedge of <b>'+pieceWords(D.pz.pie,D.proposed.i,D.proposed.len)+
+        '</b>.<br><span class="rosey">Serve it &mdash; or draw a different cut.</span>'
+      :left>0
       ?'Drag around the rim to cut a wedge <span class="rosey">&mdash; or set two fingers on the pie.</span>'
       :'The kitchen is closed. Name the palate.';
+  $('cutBtn').hidden=!(D.phase==='cutting'&&D.proposed);
   $('serveBtn').hidden=true;
   renderPub();
   $('docket').innerHTML=docket.map(k=>'<span class="dk '+k+'"></span>').join('');
@@ -515,6 +520,7 @@ function canCut(){return D&&D.phase==='cutting'&&D.pz.courses-D.cuts.length>0;}
 $('pie').addEventListener('pointerdown',ev=>{
   if(!canCut())return;
   ev.preventDefault();
+  D.proposed=null;$('cutBtn').hidden=true; // a new stroke withdraws the pending cut
   $('pie').setPointerCapture&&$('pie').setPointerCapture(ev.pointerId);
   pointers.set(ev.pointerId,angleOf(ev));
   if(pointers.size===1)anchor=snap(angleOf(ev));
@@ -534,9 +540,9 @@ function endPointer(ev){
     anchor=null;
     if(st&&canCut()){
       const len=((st.b-st.a)+SECT)%SECT;
-      if(len>=1&&len<=11)commitCut({i:st.a,len});
-      else renderPie(null);
-    }else renderPie(null);
+      D.proposed=(len>=1&&len<=11)?{i:st.a,len}:null;
+    }else D.proposed=null;
+    renderAll(); // nothing is served yet: show the pending cut and the serve button
   }
 }
 $('pie').addEventListener('pointerup',endPointer);
@@ -547,6 +553,7 @@ function pieceWords(pie,i,len){
   return len+' slice'+(len===1?'':'s')+', '+c+' cherr'+(c===1?'y':'ies')+', '+a+' almond'+(a===1?'':'s');
 }
 function commitCut(cut){
+  D.proposed=null;
   const side=outcome(D.pz.pie,cut,D.truth.w);
   D.cuts.push(cut);
   D.lastResult={cut,side};
@@ -560,7 +567,7 @@ function commitCut(cut){
     ?'The guest takes <b>the wedge</b> <span class="rosey">('+w+')</span> and leaves the rest ('+rest+').'
     :side===-1
     ?'The guest waves the wedge away ('+w+') and takes <b>the rest</b> <span class="rosey">('+rest+')</span>.'
-    :'The guest <b>shrugs</b> &mdash; wedge or rest, it truly does not mind.';
+    :'The guest <b>shrugs</b> &mdash; wedge or rest, he truly does not mind.';
   // log row with mini pie
   const row=document.createElement('div');row.className='row';
   row.innerHTML=miniPie(cut,side)+'<span>course '+D.cuts.length+': '+
@@ -588,11 +595,14 @@ onTap($('serveBtn'),()=>{
   D.phase='cutting';D.lastResult=null;
   renderAll();
 });
+onTap($('cutBtn'),()=>{
+  if(D.phase==='cutting'&&D.proposed&&canCut())commitCut(D.proposed);
+});
 function renderPub(){
   $('pub').innerHTML='';
   D.guests.forEach((g,i)=>{
     const b=document.createElement('button');
-    b.innerHTML='<span class="ptag">'+'ABC'[i]+'</span> it is <i>'+g.name+'</i>';
+    b.innerHTML='<span class="ptag">'+'ABC'[i]+'</span> he is <i>'+g.name+'</i>';
     onTap(b,()=>publish(g.key));
     $('pub').appendChild(b);
   });
@@ -611,8 +621,8 @@ function publish(claim){
   if(res.cat==='ACCEPT_GUEST'){
     dk='ok';head.textContent='Named.';head.className='ok';
     const X=res.used,Y=res.min;
-    if(X>Y)text.innerHTML='It is indeed <b>'+nameOf(claim)+'</b>. You needed '+X+' courses; a sharper knife needed <b>'+Y+'</b>.';
-    else text.innerHTML='It is indeed <b>'+nameOf(claim)+'</b> &mdash; named in <b>'+X+'</b> course'+(X===1?'':'s')+', the fewest possible.';
+    if(X>Y)text.innerHTML='He is indeed <b>'+nameOf(claim)+'</b>. You needed '+X+' courses; a sharper knife needed <b>'+Y+'</b>.';
+    else text.innerHTML='He is indeed <b>'+nameOf(claim)+'</b> &mdash; named in <b>'+X+'</b> course'+(X===1?'':'s')+', the fewest possible.';
   }else if(res.cat==='ACCEPT_NONID'){
     dk='ok';head.textContent='Named.';head.className='ok';
     text.innerHTML='Correct &mdash; and it is the pie’s fault, not yours. However you cut <b>this</b> pie, the remaining palates would always reach for the same piece. Where the data carry no variation, no appetite for truth can help. <b>Knowing the limit is knowledge.</b>';
