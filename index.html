@@ -73,7 +73,7 @@ svg{display:block}
 .log .row{display:flex;gap:9px;align-items:center;font-size:11.5px;color:var(--cream2)}
 .log .row svg{flex-shrink:0}
 .log .took{color:var(--rose)}
-.log .row.sharp{color:var(--almond)}
+.log .row.sharp{color:var(--muted);font-style:italic}
 
 /* publish */
 .pub{display:flex;flex-direction:column;gap:7px}
@@ -104,8 +104,12 @@ svg{display:block}
 
 /* docket */
 .docket{display:flex;gap:5px;flex-wrap:wrap;min-height:12px}
-.dk{width:10px;height:10px;border-radius:50%}
-.dk.ok{background:var(--ok)} .dk.no{background:var(--no)}
+.dk{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dk.ok{background:var(--ok)} .dk.no{background:var(--no)} .dk.am{background:var(--almond)}
+.dklegend{display:flex;gap:4px;align-items:center;font-size:9px;letter-spacing:.1em}
+.dklegend .dk{width:7px;height:7px;margin-left:5px}
+.vrec{display:flex;align-items:center;justify-content:center;gap:8px;margin:-8px 0 16px;
+  font-size:11px;color:var(--muted);letter-spacing:.06em}
 
 /* welcome */
 .welcome{position:fixed;inset:0;background:var(--bg);z-index:60;overflow-y:auto;
@@ -169,7 +173,8 @@ footer a{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--m
   <div class="sec"><span>name the palate</span></div>
   <div class="pub" id="pub"></div>
 
-  <div class="sec"><span>your evenings</span></div>
+  <div class="sec"><span>your evenings</span>
+    <span class="dklegend"><span class="dk ok"></span>sharp<span class="dk am"></span>dear<span class="dk no"></span>wrong</span></div>
   <div class="docket" id="docket"></div>
 
   <footer><a href="https://steffenhuck.github.io" target="_blank" rel="noopener">steffen huck</a></footer>
@@ -179,6 +184,7 @@ footer a{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--m
   <div class="vcard">
     <h2 id="vHead">Named.</h2>
     <p id="vText"></p>
+    <div class="vrec" id="vRec"></div>
     <button id="vNext">next dinner</button>
     <button id="vLook" class="look">look at the table</button>
   </div>
@@ -682,8 +688,9 @@ function publish(claim){
     if(Number.isFinite(mc.n))layKnife(mc.cuts);
   };
   if(res.cat==='ACCEPT_GUEST'){
-    dk='ok';head.textContent='Named.';head.className='ok';
+    head.textContent='Named.';head.className='ok';
     const X=res.used,Y=res.min;
+    dk=Y<X?'am':'ok';
     let t='He is indeed <b>'+nameOf(claim)+'</b> &mdash; named in <b>'+X+'</b> course'+(X===1?'':'s')+'.';
     if(Y<X){t+=' A sharper knife needed <b>'+Y+'</b> &mdash; its dinner is laid beneath yours on the table.';layKnife(res.minCuts);}
     else{t+=' That is the fewest possible &mdash; <b>the sharp knife was yours</b>.';
@@ -692,8 +699,12 @@ function publish(claim){
       t+=' The table was already decided after course '+res.solvedAt+' &mdash; the last '+(X-res.solvedAt)+' changed nothing.';
     text.innerHTML=t;
   }else if(res.cat==='ACCEPT_NONID'){
-    dk='ok';head.textContent='Named.';head.className='ok';
-    text.innerHTML='Correct &mdash; and it is the pie’s fault, not yours. However you cut <b>this</b> pie, the remaining palates would always reach for the same piece. Where the data carry no variation, no appetite for truth can help. <b>Knowing the limit is knowledge.</b>';
+    dk=D.cuts.length>0?'am':'ok';head.textContent='Named.';head.className='ok';
+    let t='Correct &mdash; and it is the pie’s fault, not yours. However you cut <b>this</b> pie, the remaining palates would always reach for the same piece. Where the data carry no variation, no appetite for truth can help. <b>Knowing the limit is knowledge.</b>';
+    if(D.cuts.length>0)
+      t+=' Though mark: twins are twins from the first glance &mdash; the limit was legible before your knife ever moved, and your '+
+        D.cuts.length+' course'+(D.cuts.length===1?'':'s')+' answered a question already settled.';
+    text.innerHTML=t;
   }else if(res.cat==='REJECT_NOTYET'){
     head.textContent='Refused.';head.className='no';
     const other=res.surv.find(g=>g.key!==claim);
@@ -716,6 +727,9 @@ function publish(claim){
   }
   docket.push(dk);
   $('docket').innerHTML=docket.map(k=>'<span class="dk '+k+'"></span>').join('');
+  $('vRec').innerHTML='<span class="dk '+dk+'"></span> '+
+    (dk==='ok'?'a green evening':dk==='am'?'an amber evening &mdash; right, but dear':'a red evening')+
+    ' &mdash; added to your record';
   $('sheet').classList.add('show');
 }
 onTap($('vNext'),()=>newDinner());
