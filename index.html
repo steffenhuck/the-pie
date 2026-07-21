@@ -430,18 +430,21 @@ function toppingsSVG(shift){
     const off=shift&&shift.set.has(sec)?shift:null;
     const dx=off?off.dx:0, dy=off?off.dy:0;
     const nC=pie.c[sec],nA=pie.a[sec];
+    let ss='';
     if(nC>0)for(let k=0;k<nC;k++){
       const ang=a0+30*SPOTS[nC-1][k];
-      s+='<circle cx="'+(PX(ang,R*0.56)+dx)+'" cy="'+(PY(ang,R*0.56)+dy)+
+      ss+='<circle cx="'+(PX(ang,R*0.56)+dx)+'" cy="'+(PY(ang,R*0.56)+dy)+
         '" r="7" fill="#c94f4f" stroke="#7e2f2f" stroke-width="1.5"/>'+
         '<circle cx="'+(PX(ang,R*0.56)+dx-2)+'" cy="'+(PY(ang,R*0.56)+dy-2.5)+'" r="2" fill="#e89a9a"/>';
     }
     if(nA>0)for(let k=0;k<nA;k++){
       const ang=a0+30*SPOTS[nA-1][k];
-      s+='<ellipse cx="'+(PX(ang,R*0.82)+dx)+'" cy="'+(PY(ang,R*0.82)+dy)+
+      ss+='<ellipse cx="'+(PX(ang,R*0.82)+dx)+'" cy="'+(PY(ang,R*0.82)+dy)+
         '" rx="8" ry="5" transform="rotate('+(ang+20)+' '+(PX(ang,R*0.82)+dx)+' '+(PY(ang,R*0.82)+dy)+
         ')" fill="#d8b56a" stroke="#8f7136" stroke-width="1.3"/>';
     }
+    // the declined piece fades with its toppings
+    s+=(shift&&!shift.set.has(sec))?'<g opacity="0.45">'+ss+'</g>':ss;
   }
   return s;
 }
@@ -462,24 +465,32 @@ function renderPie(drag){
     const wedgeSecs=new Set();for(let k=0;k<c.len;k++)wedgeSecs.add((c.i+k)%SECT);
     const secs=taken.side===1?wedgeSecs:new Set([...Array(SECT).keys()].filter(x=>!wedgeSecs.has(x)));
     const mid=taken.side===1?(c.i*30+c.len*15):(c.i*30+c.len*15+180);
-    shift={set:secs,dx:14*Math.cos(rad(mid)),dy:14*Math.sin(rad(mid))};
-    // redraw as two pieces: remainder + shifted piece
+    shift={set:secs,mid,dx:20*Math.cos(rad(mid)),dy:20*Math.sin(rad(mid))};
+    // redraw as two pieces: the declined piece fades, the chosen one slides out
     s='';
     const a0=c.i*30,a1=(c.i+c.len)*30;
     const other=taken.side===1?wedgePath(a1,a0,R):wedgePath(a0,a1,R);
     const takenPath=taken.side===1
       ?wedgePath(a0,a1,R,CX+shift.dx,CY+shift.dy)
       :wedgePath(a1,a0,R,CX+shift.dx,CY+shift.dy);
-    s+='<path d="'+other+'" fill="#efdcb8" stroke="#b98d5e" stroke-width="6"/>';
+    s+='<path d="'+other+'" fill="#efdcb8" fill-opacity="0.5" stroke="#b98d5e" stroke-opacity="0.5" stroke-width="6"/>';
     s+='<path d="'+takenPath+'" fill="#f4e6c8" stroke="#d16d8a" stroke-width="4"/>';
     for(let k=0;k<SECT;k++){
       const inTaken=secs.has(k);
       const dx=inTaken?shift.dx:0,dy=inTaken?shift.dy:0;
       s+='<line x1="'+(CX+dx)+'" y1="'+(CY+dy)+'" x2="'+(PX(k*30,R)+dx)+'" y2="'+(PY(k*30,R)+dy)+
-        '" stroke="#b98d5e" stroke-width="1" opacity="0.3"/>';
+        '" stroke="#b98d5e" stroke-width="1" opacity="'+(inTaken?0.3:0.15)+'"/>';
     }
   }
   s+=toppingsSVG(shift);
+  if(shift){
+    // a rose tag pinned to the piece he took
+    const lx=CX+shift.dx+(R*0.52)*Math.cos(rad(shift.mid));
+    const ly=CY+shift.dy+(R*0.52)*Math.sin(rad(shift.mid));
+    s+='<g><rect x="'+(lx-40)+'" y="'+(ly-11)+'" width="80" height="22" rx="11" fill="#d16d8a"/>'+
+      '<text x="'+lx+'" y="'+(ly+3.5)+'" text-anchor="middle" font-family="Courier Prime,monospace" '+
+      'font-size="10.5" font-weight="700" letter-spacing="1" fill="#26101a">HIS CHOICE</text></g>';
+  }
   if(taken&&taken.side===0){
     // shrug: both halves shimmer
     const c=taken.cut,a0=c.i*30,a1=(c.i+c.len)*30;
