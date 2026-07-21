@@ -484,8 +484,9 @@ function renderAll(){
       '<div class="gsay">'+g.say+'</div></div><span class="gone-tag">not them</span>';
     $('guests').appendChild(d);
   });
-  $('plates').innerHTML='<span style="font-size:10px;color:var(--muted)">courses served: '+
-    D.cuts.length+' &middot; the larder is deep</span>';
+  $('plates').innerHTML='<span style="font-size:10px;color:var(--muted)">courses: '+
+    D.cuts.length+' &middot; the bake holds '+total(D.pie.c)+' cherries, '+total(D.pie.a)+
+    ' almonds, '+SECT+' slices</span>';
   renderPie(D.proposed?{a:D.proposed.i,b:(D.proposed.i+D.proposed.len)%SECT}:null);
   if(D.phase==='cutting')
     $('caption').innerHTML=D.proposed
@@ -668,12 +669,12 @@ function commitCut(cut){
     ?'The guest takes <b>the wedge</b> <span class="rosey">('+w+')</span> and leaves the rest ('+rest+').'
     :side===-1
     ?'The guest waves the wedge away ('+w+') and takes <b>the rest</b> <span class="rosey">('+rest+')</span>.'
-    :'The guest <b>shrugs</b> &mdash; wedge or rest, he truly does not mind.';
+    :'The guest <b>shrugs</b> &mdash; the wedge ('+w+') and the rest ('+rest+') please him exactly alike.';
   // log row with mini pie
   const row=document.createElement('div');row.className='row';
   row.innerHTML=miniPie(cut,side)+'<span>course '+D.cuts.length+': '+
     (side===1?'<span class="took">took the wedge</span>':side===-1?'<span class="took">took the rest</span>':'shrugged')+
-    ' &middot; wedge held '+w+'</span>';
+    ' &middot; wedge: '+w+' &middot; rest: '+rest+'</span>';
   $('log').appendChild(row);
   $('serveBtn').hidden=false; // another identical pie always waits
 }
@@ -727,7 +728,8 @@ function layKnife(witness,headline){
     const row=document.createElement('div');row.className='row sharp';
     row.innerHTML=miniPie(cut,side)+'<span>course '+(k+1)+': '+
       (side===1?'he takes the wedge':side===-1?'he takes the rest':'he shrugs')+
-      ' &middot; wedge held '+pieceWords(D.pie,cut.i,cut.len)+'</span>';
+      ' &middot; wedge: '+pieceWords(D.pie,cut.i,cut.len)+
+      ' &middot; rest: '+pieceWords(D.pie,(cut.i+cut.len)%SECT,SECT-cut.len)+'</span>';
     $('log').appendChild(row);
   });
 }
