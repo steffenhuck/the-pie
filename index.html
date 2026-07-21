@@ -310,9 +310,9 @@ const GUESTS={
     say:'Two points an almond, one a cherry, one a slice of cake.'},
   /* richer palates: utilities beyond any point-sheet, still integer-exact */
   HARMONIST:{u:(C,A,S)=>-Math.abs(C-A),name:'The Harmonist',
-    say:'Craves balance: the nearer a piece comes to equal cherries and almonds, the better. Counts nothing else.'},
+    say:'Counts a piece’s cherries against its almonds and craves balance: two-and-two delights him, four-and-nought leaves him cold. Cake counts for nothing.'},
   PURIST:{u:(C,A,S)=>Math.abs(C-A),name:'The Purist',
-    say:'Craves dominance: the wider the gap between a piece’s cherries and almonds, the better. Counts nothing else.'},
+    say:'Counts a piece’s cherries against its almonds and craves lopsidedness: four-and-nought delights him, two-and-two leaves him cold. Cake counts for nothing.'},
   ASCETIC:{w:[0,0,-1],name:'The Ascetic',
     say:'Eats like a bird: always reaches for the piece with fewer slices. Toppings are noise.'},
 };
