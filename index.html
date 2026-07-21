@@ -762,8 +762,13 @@ function publish(claim){
   }else if(res.cat==='REJECT_NOTYET'){
     head.textContent='Refused.';head.className='no';
     const other=res.surv.find(g=>g.key!==claim);
-    text.innerHTML='<b>'+nameOf(claim)+'</b> would indeed have chosen exactly so &mdash; but so would <b>'+
-      nameOf(other.key)+'</b> ('+letterOf(other.key)+'). A palate that fits is not a palate identified.';
+    const N=D.cuts.length;
+    text.innerHTML=(N===0
+      ?'<b>'+nameOf(claim)+'</b> fits &mdash; but you have served nothing, and every palate fits an empty table.'
+      :'Check your ledger: at <b>every one of your '+N+' course'+(N===1?'':'s')+'</b>, <b>'+nameOf(claim)+
+       '</b> would have reached for exactly the piece the guest took &mdash; piece for piece.')+
+      ' But so would <b>'+nameOf(other.key)+'</b> ('+letterOf(other.key)+
+      '). A palate that fits is not a palate identified.';
     knifeForRejects();
   }else if(res.cat==='REJECT_WRONG'){
     head.textContent='Refused.';head.className='no';
