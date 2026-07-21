@@ -160,7 +160,7 @@ footer a{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--m
     <div class="piewrap"><svg id="pie" width="330" height="330" viewBox="0 0 330 330"></svg></div>
     <div class="caption" id="caption"></div>
     <button class="servebtn" id="cutBtn" hidden>put the choice to the guest</button>
-    <button class="servebtn" id="serveBtn" hidden>serve the next pie</button>
+    <button class="servebtn" id="serveBtn" hidden>next course &mdash; same bake</button>
   </div>
 
   <div class="sec"><span>courses served</span></div>
@@ -349,6 +349,16 @@ const TEMPLATES7={
       return {pie:{c,a},cast:['CHERRY','ALMOND','SWEET']};}
   },
 };
+/* a dealt pie is a rotation (and possibly a mirror) of a catalogue pie:
+   the cut space is closed under both, so every identification fact —
+   outcomes, twins, depth, verdicts — carries over exactly. The harness
+   proves this for all 24 orientations of every dinner. */
+function orientPie(pie,rot,flip){
+  const map=s=>{let t=(s+rot)%SECT;if(flip)t=(SECT-1-t+SECT)%SECT;return t;};
+  const c=[],a=[];
+  for(let s=0;s<SECT;s++){c.push(pie.c[map(s)]);a.push(pie.a[map(s)]);}
+  return {c,a};
+}
 function expandParams(menu){
   let combos=[{}];
   for(const k of Object.keys(menu)){
@@ -370,7 +380,7 @@ function enumerateAll7(){
   return out;
 }
 const G7ENGINE={SECT,ALLCUTS,outcome,pairSep,proportional,survivorsOf,depthEff,
-  minCutsSearch,solvedAfter,adjudicate,GUESTS,guest,TEMPLATES7,expandParams,enumerateAll7};
+  minCutsSearch,solvedAfter,adjudicate,orientPie,GUESTS,guest,TEMPLATES7,expandParams,enumerateAll7};
 /*==G7-ENGINE-END==*/
 
 /* ---------------- presentation ---------------- */
@@ -391,14 +401,16 @@ function newDinner(){
     ?(Math.random()<0.2?rand(ADVDINNERS):rand(BASICDINNERS))
     :rand(ALLDINNERS);
   const guests=pz.guests.slice().sort(()=>Math.random()-0.5);
-  D={pz,guests,truth:rand(guests),cuts:[],phase:'cutting', // cutting | served | done
+  // each dinner bakes its pie in a fresh orientation — same facts, new look
+  const pie=orientPie(pz.pie,Math.floor(Math.random()*SECT),Math.random()<0.5);
+  D={pz,pie,guests,truth:rand(guests),cuts:[],phase:'cutting', // cutting | served | done
      proposed:null,lastResult:null,revealed:false};
   $('sheet').classList.remove('show');
   $('floatNew').classList.remove('show');
   $('log').innerHTML='';
   renderAll();
 }
-function survNow(){return survivorsOf(D.pz.pie,D.guests,D.truth,D.cuts);}
+function survNow(){return survivorsOf(D.pie,D.guests,D.truth,D.cuts);}
 function renderAll(){
   $('dinnerNo').textContent='dinner no. '+dinnerNo+(TEMPLATES7[D.pz.tKey].adv?' · an advanced pie':'');
   // hardcore: no palate is struck off while you play — only the verdict reveals
@@ -417,8 +429,8 @@ function renderAll(){
   renderPie(D.proposed?{a:D.proposed.i,b:(D.proposed.i+D.proposed.len)%SECT}:null);
   if(D.phase==='cutting')
     $('caption').innerHTML=D.proposed
-      ?'Your cut offers a choice: <b>the wedge</b> ('+pieceWords(D.pz.pie,D.proposed.i,D.proposed.len)+
-        ') against <b>the rest</b> ('+pieceWords(D.pz.pie,(D.proposed.i+D.proposed.len)%SECT,SECT-D.proposed.len)+
+      ?'Your cut offers a choice: <b>the wedge</b> ('+pieceWords(D.pie,D.proposed.i,D.proposed.len)+
+        ') against <b>the rest</b> ('+pieceWords(D.pie,(D.proposed.i+D.proposed.len)%SECT,SECT-D.proposed.len)+
         ').<br><span class="rosey">Put it to the guest &mdash; or draw a different cut.</span>'
       :'Drag around the rim to cut a wedge <span class="rosey">&mdash; or set two fingers on the pie.</span>';
   $('cutBtn').hidden=!(D.phase==='cutting'&&D.proposed);
@@ -441,7 +453,7 @@ function wedgePath(a0,a1,r,cx,cy){ // a0->a1 clockwise degrees
 const SPOTS=[[0.5],[0.3,0.7],[0.2,0.5,0.8]];
 function toppingsSVG(shift){
   let s='';
-  const pie=D.pz.pie;
+  const pie=D.pie;
   for(let sec=0;sec<SECT;sec++){
     const a0=sec*30;
     const off=shift&&shift.set.has(sec)?shift:null;
@@ -583,13 +595,13 @@ function pieceWords(pie,i,len){
 }
 function commitCut(cut){
   D.proposed=null;
-  const side=outcome(D.pz.pie,cut,D.truth.w);
+  const side=outcome(D.pie,cut,D.truth.w);
   D.cuts.push(cut);
   D.lastResult={cut,side};
   D.phase='served';
   renderAll();
   renderPie(null);
-  const pie=D.pz.pie;
+  const pie=D.pie;
   const w=pieceWords(pie,cut.i,cut.len);
   const rest=pieceWords(pie,(cut.i+cut.len)%SECT,SECT-cut.len);
   $('caption').innerHTML=side===1
@@ -621,6 +633,8 @@ onTap($('serveBtn'),()=>{
   if(D.phase!=='served')return;
   D.phase='cutting';D.lastResult=null;
   renderAll();
+  $('caption').innerHTML='A fresh pie of <b>the same bake</b> is on the table &mdash; this dinner continues. '+
+    'Drag around the rim to cut<span class="rosey">, or set two fingers on the pie.</span>';
 });
 onTap($('cutBtn'),()=>{
   if(D.phase==='cutting'&&D.proposed&&canCut())commitCut(D.proposed);
@@ -649,22 +663,22 @@ function layKnife(witness){
     witness.length+' course'+(witness.length===1?'':'s')+':</span>';
   $('log').appendChild(h);
   witness.forEach((cut,k)=>{
-    const side=outcome(D.pz.pie,cut,D.truth.w);
+    const side=outcome(D.pie,cut,D.truth.w);
     const row=document.createElement('div');row.className='row sharp';
     row.innerHTML=miniPie(cut,side)+'<span>course '+(k+1)+': '+
       (side===1?'he takes the wedge':side===-1?'he takes the rest':'he shrugs')+
-      ' &middot; wedge held '+pieceWords(D.pz.pie,cut.i,cut.len)+'</span>';
+      ' &middot; wedge held '+pieceWords(D.pie,cut.i,cut.len)+'</span>';
     $('log').appendChild(row);
   });
 }
 function publish(claim){
-  const res=adjudicate(D.pz.pie,D.guests,D.truth,D.cuts,claim);
+  const res=adjudicate(D.pie,D.guests,D.truth,D.cuts,claim);
   D.revealed=true;D.phase='done';
   renderAll();
   const head=$('vHead'),text=$('vText');
   let dk='no';
   const knifeForRejects=()=>{ // show how it could have been done, if it could
-    const mc=minCutsSearch(D.pz.pie,D.guests,D.truth,3);
+    const mc=minCutsSearch(D.pie,D.guests,D.truth,3);
     if(Number.isFinite(mc.n))layKnife(mc.cuts);
   };
   if(res.cat==='ACCEPT_GUEST'){
