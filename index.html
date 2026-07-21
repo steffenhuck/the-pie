@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="color-scheme" content="dark only">
+<title>The Pie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<script data-goatcounter="https://steffenhuck.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#1d1420;          /* midnight plum */
+  --panel:#271b2b;
+  --edge:#453250;
+  --cream:#f0e5d8;
+  --cream2:#c9b9ad;
+  --muted:#8d7f92;
+  --rose:#d16d8a;
+  --cherry:#c94f4f;
+  --almond:#d8b56a;
+  --crust:#b98d5e;
+  --cake:#efdcb8;
+  --ok:#8fb573;
+  --no:#d0685c;
+  --rt:#c9973b;
+  --serif:'Playfair Display',Georgia,serif;
+  --mono:'Courier Prime',ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;background:var(--bg)}
+body{color:var(--cream);font-family:var(--mono);font-size:13.5px;line-height:1.5;
+  display:flex;flex-direction:column;align-items:center;
+  padding:env(safe-area-inset-top) 14px env(safe-area-inset-bottom);overflow-x:hidden}
+.wrap{width:100%;max-width:460px;display:flex;flex-direction:column;padding-bottom:44px}
+header{text-align:center;margin:20px 0 2px}
+h1{font-family:var(--serif);font-weight:700;font-size:38px;margin:0;color:var(--rose);letter-spacing:.01em}
+.sub{color:var(--muted);font-size:10px;letter-spacing:.24em;text-transform:uppercase;margin-top:5px}
+.sec{margin:15px 2px 7px;font-size:10px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;
+  display:flex;justify-content:space-between;align-items:baseline}
+
+/* guests */
+.guests{display:flex;flex-direction:column;gap:7px}
+.guest{background:var(--panel);border:1px solid var(--edge);border-radius:8px;padding:9px 12px;
+  display:flex;gap:11px;align-items:center;transition:opacity .6s}
+.guest.gone{opacity:.28}
+.guest .mono{width:38px;height:38px;border-radius:50%;flex-shrink:0;border:1.5px solid var(--rose);
+  display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:19px;
+  font-weight:700;color:var(--rose)}
+.guest .gname{font-family:var(--serif);font-weight:700;font-size:15px;color:var(--cream)}
+.guest .gsay{font-family:var(--serif);font-size:13.5px;color:var(--cream2);line-height:1.4}
+.guest .gone-tag{display:none;font-size:10px;color:var(--no);font-style:italic;margin-left:auto;flex-shrink:0}
+.guest.gone .gone-tag{display:block}
+
+/* table */
+.table{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:10px 10px 6px;
+  touch-action:none}
+.piewrap{display:flex;justify-content:center}
+svg{display:block}
+.caption{text-align:center;font-family:var(--serif);font-size:14px;color:var(--cream2);
+  min-height:42px;padding:4px 6px 6px;line-height:1.4}
+.caption b{color:var(--cream)}
+.caption .rosey{color:var(--rose)}
+.courses{display:flex;gap:6px;align-items:center}
+.plate{width:12px;height:12px;border-radius:50%;background:var(--rose);box-shadow:0 0 0 2px #d16d8a2e}
+.plate.spent{background:transparent;border:1px dashed var(--muted);box-shadow:none;opacity:.55}
+.servebtn{display:block;margin:2px auto 8px;background:var(--rose);color:#26101a;border:none;border-radius:999px;
+  padding:9px 22px;font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.04em;cursor:pointer}
+.servebtn[hidden]{display:none}
+
+/* log */
+.log{display:flex;flex-direction:column;gap:4px}
+.log .row{display:flex;gap:9px;align-items:center;font-size:11.5px;color:var(--cream2)}
+.log .row svg{flex-shrink:0}
+.log .took{color:var(--rose)}
+
+/* publish */
+.pub{display:flex;flex-direction:column;gap:7px}
+.pub button{background:var(--panel);border:1px solid var(--edge);border-radius:8px;padding:12px 13px;
+  font-family:var(--mono);font-size:12.5px;color:var(--cream);cursor:pointer;text-align:left;
+  display:flex;align-items:center;gap:10px;transition:.14s}
+.pub button .ptag{font-family:var(--serif);font-weight:700;font-size:15px;color:var(--rose)}
+.pub button:active{border-color:var(--rose);background:#301b28;transform:scale(.99)}
+
+/* verdict */
+.sheet{position:fixed;inset:0;background:#0009;backdrop-filter:blur(3px);display:none;
+  align-items:center;justify-content:center;z-index:40;padding:24px}
+.sheet.show{display:flex;animation:fade .3s ease}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.vcard{background:#241722;border:1px solid var(--edge);border-radius:14px;padding:24px 20px;max-width:350px;
+  width:100%;text-align:center;box-shadow:0 24px 70px #000c}
+.vcard h2{font-family:var(--serif);font-weight:700;font-size:27px;margin:0}
+.vcard h2.ok{color:var(--ok)} .vcard h2.no{color:var(--no)} .vcard h2.rt{color:var(--rt)}
+.vcard .withdrawn{font-family:var(--serif);font-weight:700;font-size:20px;color:var(--no);margin:8px 0 0;
+  opacity:0;transition:opacity .6s}
+.vcard .withdrawn.show{opacity:1}
+.vcard p{font-family:var(--serif);font-size:14.5px;color:var(--cream2);line-height:1.55;margin:13px 0 20px}
+.vcard p b{color:var(--cream)}
+.vcard button{background:var(--rose);color:#26101a;border:none;border-radius:8px;padding:12px 26px;
+  font-family:var(--mono);font-size:13px;font-weight:700;cursor:pointer;min-width:180px}
+.vcard button.look{background:transparent;color:var(--muted);border:1px solid var(--edge);margin-top:8px;font-weight:400}
+.floatnew{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom));
+  background:var(--rose);color:#26101a;border:none;border-radius:999px;padding:12px 26px;
+  font-family:var(--mono);font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 8px 24px #000a;z-index:30;display:none}
+.floatnew.show{display:block}
+
+/* docket */
+.docket{display:flex;gap:5px;flex-wrap:wrap;min-height:12px}
+.dk{width:10px;height:10px;border-radius:50%}
+.dk.ok{background:var(--ok)} .dk.no{background:var(--no)} .dk.rt{background:var(--rt)}
+
+/* welcome */
+.welcome{position:fixed;inset:0;background:var(--bg);z-index:60;overflow-y:auto;
+  display:flex;flex-direction:column;align-items:center;padding:0 24px env(safe-area-inset-bottom)}
+.welcome.hidden{display:none}
+.winner{width:100%;max-width:440px;padding:44px 0 30px}
+.welcome h1{font-size:44px;text-align:center}
+.welcome .tagline{text-align:center;color:var(--muted);font-size:10px;letter-spacing:.24em;
+  text-transform:uppercase;margin:8px 0 24px}
+.welcome .prose{font-family:var(--serif);font-size:15.5px;color:var(--cream2);line-height:1.6}
+.welcome .prose p{margin:0 0 14px}
+.welcome .prose b{color:var(--cream)}
+.welcome .prose .rosey{color:var(--rose)}
+.wplay{display:block;width:100%;margin:22px 0 10px;background:var(--rose);color:#26101a;border:none;
+  border-radius:9px;padding:15px;font-family:var(--mono);font-size:14px;font-weight:700;letter-spacing:.05em;cursor:pointer}
+footer{text-align:center;margin-top:24px}
+footer a{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--muted);
+  text-decoration:none;text-transform:lowercase}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="welcome" id="welcome">
+  <div class="winner">
+    <h1>The Pie</h1>
+    <div class="tagline">a game of cuts and appetites</div>
+    <div class="prose">
+      <p>A guest has come to dinner, and you have baked <b>identical pies</b> — cherries here, almonds there, cake everywhere. You know the guest is one of <b>three palates</b>, each precise to the point. You do not know which.</p>
+      <p>Each course, cut one wedge: <b>drag a finger around the rim</b> — or set <b>two fingers</b> on the pie at once. The guest takes whichever piece it scores higher; if the pieces tie, it <b>shrugs</b> and you see that too.</p>
+      <p>Its choices are all you will ever learn. Cut where the palates <span class="rosey">disagree</span> — a piece every palate would take teaches you nothing.</p>
+      <p>When you are ready, <b>name the palate</b> — or rule that <b>no cut of this pie can tell the survivors apart</b>. A proven limit is worth as much as a naming. Haste is worth nothing; neither is surrender while a telling cut remains.</p>
+      <p>Pies don’t keep. You have only so many courses.</p>
+    </div>
+    <button class="wplay" id="wPlay">SEAT THE GUEST</button>
+    <footer><a href="https://steffenhuck.github.io" target="_blank" rel="noopener">steffen huck</a></footer>
+  </div>
+</div>
+
+<div class="wrap">
+  <header>
+    <h1>The Pie</h1>
+    <div class="sub">whose appetite is at your table?</div>
+  </header>
+
+  <div class="sec"><span>the three palates</span><span id="dinnerNo"></span></div>
+  <div class="guests" id="guests"></div>
+
+  <div class="sec"><span>the table</span><span class="courses" id="plates"></span></div>
+  <div class="table" id="tableBox">
+    <div class="piewrap"><svg id="pie" width="330" height="330" viewBox="0 0 330 330"></svg></div>
+    <div class="caption" id="caption"></div>
+    <button class="servebtn" id="serveBtn" hidden>serve the next pie</button>
+  </div>
+
+  <div class="sec"><span>courses served</span></div>
+  <div class="log" id="log"></div>
+
+  <div class="sec"><span>name the palate</span></div>
+  <div class="pub" id="pub"></div>
+
+  <div class="sec"><span>your evenings</span></div>
+  <div class="docket" id="docket"></div>
+
+  <footer><a href="https://steffenhuck.github.io" target="_blank" rel="noopener">steffen huck</a></footer>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="vcard">
+    <h2 id="vHead">Named.</h2>
+    <div class="withdrawn" id="vWithdrawn">Withdrawn.</div>
+    <p id="vText"></p>
+    <button id="vNext">next dinner</button>
+    <button id="vLook" class="look">look at the table</button>
+  </div>
+</div>
+<button class="floatnew" id="floatNew">next dinner</button>
+
+<script>
+'use strict';
+/*==G7-ENGINE-START==*/
+/* The Pie — revealed-preference identification engine.
+   A pie has SECT=12 sectors with integer cherry/almond counts. A cut is a
+   contiguous wedge [i, i+len), len 1..11; the guest compares
+   U = wc*cherries + wa*almonds + ws*sectors between wedge and remainder and
+   takes the better piece (sign 1 = wedge, -1 = rest, 0 = visible shrug).
+   All arithmetic is integer, so identification questions are exact finite
+   combinatorics — computed here, never asserted, and verified independently
+   by g7-harness.js. */
+const SECT=12;
+function allCuts(){const out=[];for(let i=0;i<SECT;i++)for(let len=1;len<SECT;len++)out.push({i,len});return out;}
+const ALLCUTS=allCuts();
+function wedgeCount(arr,i,len){let s=0;for(let k=0;k<len;k++)s+=arr[(i+k)%SECT];return s;}
+const total=arr=>arr.reduce((x,y)=>x+y,0);
+const sgn=v=>v>0?1:v<0?-1:0;
+/* guest's verdict on a cut: utility(wedge) - utility(rest), sign only */
+function outcome(pie,cut,w){
+  const dC=2*wedgeCount(pie.c,cut.i,cut.len)-total(pie.c);
+  const dA=2*wedgeCount(pie.a,cut.i,cut.len)-total(pie.a);
+  const dS=2*cut.len-SECT;
+  return sgn(w[0]*dC+w[1]*dA+w[2]*dS);
+}
+/* two guests are twins on this pie iff they choose alike at EVERY cut */
+function pairSep(pie,w1,w2){return ALLCUTS.some(c=>outcome(pie,c,w1)!==outcome(pie,c,w2));}
+function survivorsOf(pie,guests,truth,cuts){
+  return guests.filter(g=>cuts.every(c=>outcome(pie,c,g.w)===outcome(pie,c,truth.w)));
+}
+/* worst-case adaptive courses to identify the truth up to twin-equivalence */
+function depthEff(pie,set){
+  let allEq=true;
+  for(let i=0;i<set.length&&allEq;i++)for(let j=i+1;j<set.length;j++)
+    if(pairSep(pie,set[i].w,set[j].w)){allEq=false;break;}
+  if(set.length<=1||allEq)return 0;
+  let best=Infinity;
+  const seen=new Set();
+  for(const c of ALLCUTS){
+    const sig=set.map(g=>outcome(pie,c,g.w)).join(',');
+    if(seen.has(sig))continue;seen.add(sig);
+    const groups=new Map();
+    for(const g of set){const o=outcome(pie,c,g.w);if(!groups.has(o))groups.set(o,[]);groups.get(o).push(g);}
+    if(groups.size<2)continue;
+    let worst=0;
+    for(const gr of groups.values())worst=Math.max(worst,depthEff(pie,gr));
+    best=Math.min(best,1+worst);
+  }
+  return best;
+}
+/* can coursesLeft more cuts GUARANTEE a singleton? (pies are identical, so
+   every cut stays available every course) */
+function canFinish(pie,set,coursesLeft){
+  if(set.length<=1)return true;
+  if(coursesLeft<=0)return false;
+  const seen=new Set();
+  for(const c of ALLCUTS){
+    const sig=set.map(g=>outcome(pie,c,g.w)).join(',');
+    if(seen.has(sig))continue;seen.add(sig);
+    const groups=new Map();
+    for(const g of set){const o=outcome(pie,c,g.w);if(!groups.has(o))groups.set(o,[]);groups.get(o).push(g);}
+    if(groups.size<2)continue;
+    let ok=true;
+    for(const gr of groups.values())if(!canFinish(pie,gr,coursesLeft-1)){ok=false;break;}
+    if(ok)return true;
+  }
+  return false;
+}
+/* fewest cuts that (under the truth's actual choices) leave only the truth:
+   search subsets of signature classes */
+function minCutsFor(pie,guests,truth,cap){
+  const reps=[];const seen=new Set();
+  for(const c of ALLCUTS){
+    const sig=guests.map(g=>outcome(pie,c,g.w)).join(',');
+    if(seen.has(sig))continue;seen.add(sig);reps.push(c);
+  }
+  let best=Infinity;
+  const n=reps.length;
+  function rec(start,chosen){
+    if(chosen.length>=best||chosen.length>cap)return;
+    const surv=survivorsOf(pie,guests,truth,chosen);
+    if(surv.length===1&&surv[0]===truth){best=chosen.length;return;}
+    for(let k=start;k<n;k++){chosen.push(reps[k]);rec(k+1,chosen);chosen.pop();}
+  }
+  rec(0,[]);
+  return best;
+}
+function adjudicate(pie,guests,truth,cuts,courses,claim){
+  const surv=survivorsOf(pie,guests,truth,cuts);
+  const left=courses-cuts.length;
+  if(claim!=='NONID'){
+    if(surv.length===1&&surv[0].key===claim)
+      return {cat:'ACCEPT_GUEST',surv,used:cuts.length,min:minCutsFor(pie,guests,truth,courses)};
+    if(surv.some(g=>g.key===claim))return {cat:'REJECT_NOTYET',surv};
+    return {cat:'REJECT_WRONG',surv};
+  }
+  if(surv.length===1)return {cat:'REJECT_SOLVED',surv};
+  if(canFinish(pie,surv,left))return {cat:'REJECT_PREMATURE',surv};
+  const couldAtStart=canFinish(pie,guests,courses);
+  return {cat:couldAtStart?'ACCEPT_RETRACT':'ACCEPT_NONID',surv};
+}
+/* guests: [wc, wa, ws] point scores */
+const GUESTS={
+  GOURMAND:{w:[0,0,2],name:'The Gourmand',
+    say:'Counts cake and cake alone: two points a slice. Toppings are beneath notice.'},
+  MODEST:{w:[0,0,1],name:'The Modest',
+    say:'Counts cake and cake alone: one point a slice. Toppings are beneath notice.'},
+  SWEET:{w:[1,1,0],name:'The Sweet Tooth',
+    say:'A point for every topping, cherry or almond alike. The cake itself bores them.'},
+  CHERRY:{w:[2,1,1],name:'The Cherry Devotee',
+    say:'Two points a cherry, one an almond, one a slice of cake.'},
+  ALMOND:{w:[1,2,1],name:'The Almond Devotee',
+    say:'Two points an almond, one a cherry, one a slice of cake.'},
+};
+function guest(key){const g=GUESTS[key];return {key,w:g.w,name:g.name,say:g.say};}
+/* dinner templates: finite parameter menus so the harness can sweep every
+   table the game can ever set. courses = depthEff+1, always computed. */
+const TEMPLATES7={
+  ORCHARD:{ // cherries east, almonds west: everything separable
+    params:{cd:[2,3],ad:[2,3]},
+    make:o=>({pie:{c:[o.cd,2,2,1,0,0,0,0,0,0,0,1],a:[0,0,0,0,1,o.ad,2,2,1,0,0,0]},
+      cast:['GOURMAND','CHERRY','ALMOND']})
+  },
+  COLLINEAR:{ // cherries and almonds always together: the devotees are twins
+    params:{p0:[3,2],p3:[3,2]},
+    make:o=>{const pat=[o.p0,3,3,o.p3,0,0,0,0,0,0,0,0];
+      return {pie:{c:pat.slice(),a:pat.slice()},cast:['CHERRY','ALMOND','GOURMAND']};}
+  },
+  COPY:{ // proportional point-sheets: choices identify tastes only up to scale
+    params:{v:[0,1]},
+    make:o=>({pie:o.v===0
+        ?{c:[2,2,1,0,0,0,0,0,0,0,1,2],a:[0,0,0,1,2,2,2,1,0,0,0,0]}
+        :{c:[0,1,2,2,1,0,0,0,0,0,0,0],a:[0,0,0,0,0,1,2,2,2,1,0,0]},
+      cast:['GOURMAND','MODEST','SWEET']})
+  },
+  BANQUET:{ // no single cut splits all three: two courses are necessary
+    params:{v:[0,1,2]},
+    make:o=>({pie:[
+        {c:[2,2,2,2,0,0,0,0,0,0,0,0],a:[0,0,0,0,0,0,2,2,1,1,0,0]},
+        {c:[3,3,2,0,0,0,0,0,0,0,0,0],a:[0,0,0,0,0,0,2,2,1,0,0,0]},
+        {c:[3,3,2,2,0,0,0,0,0,0,0,0],a:[0,0,0,0,0,0,3,3,1,1,0,0]}][o.v],
+      cast:['GOURMAND','SWEET','CHERRY']})
+  },
+};
+function expandParams(menu){
+  let combos=[{}];
+  for(const k of Object.keys(menu)){
+    const next=[];
+    for(const c of combos)for(const v of menu[k])next.push({...c,[k]:v});
+    combos=next;
+  }
+  return combos;
+}
+function enumerateAll7(){
+  const out=[];
+  for(const tKey of Object.keys(TEMPLATES7)){
+    for(const params of expandParams(TEMPLATES7[tKey].params)){
+      const b=TEMPLATES7[tKey].make(params);
+      const guests=b.cast.map(guest);
+      const d=depthEff(b.pie,guests);
+      out.push({tKey,params,pie:b.pie,guests,courses:d+1});
+    }
+  }
+  return out;
+}
+const G7ENGINE={SECT,ALLCUTS,outcome,pairSep,survivorsOf,depthEff,canFinish,
+  minCutsFor,adjudicate,GUESTS,guest,TEMPLATES7,expandParams,enumerateAll7};
+/*==G7-ENGINE-END==*/
+
+/* ---------------- presentation ---------------- */
+const $=id=>document.getElementById(id);
+function onTap(el,fn){let h=false;const run=e=>{if(h)return;h=true;setTimeout(()=>h=false,350);
+  if(e&&e.cancelable)e.preventDefault();fn(e);};el.addEventListener('pointerup',run);el.addEventListener('click',run);}
+const ALLDINNERS=enumerateAll7();
+
+let D=null,dinnerNo=0;
+const docket=[];
+function rand(a){return a[Math.floor(Math.random()*a.length)];}
+function newDinner(){
+  dinnerNo++;
+  const pz=rand(ALLDINNERS);
+  const guests=pz.guests.slice().sort(()=>Math.random()-0.5);
+  D={pz,guests,truth:rand(guests),cuts:[],phase:'cutting', // cutting | served | done
+     lastResult:null};
+  $('sheet').classList.remove('show');
+  $('floatNew').classList.remove('show');
+  $('log').innerHTML='';
+  renderAll();
+}
+function survNow(){return survivorsOf(D.pz.pie,D.guests,D.truth,D.cuts);}
+function renderAll(){
+  $('dinnerNo').textContent='dinner no. '+dinnerNo;
+  const surv=survNow();
+  // guests
+  $('guests').innerHTML='';
+  D.guests.forEach((g,i)=>{
+    const gone=!surv.includes(g);
+    const d=document.createElement('div');d.className='guest'+(gone?' gone':'');
+    d.innerHTML='<div class="mono">'+'ABC'[i]+'</div><div><div class="gname">'+g.name+'</div>'+
+      '<div class="gsay">'+g.say+'</div></div><span class="gone-tag">not them</span>';
+    $('guests').appendChild(d);
+  });
+  // plates
+  const left=D.pz.courses-D.cuts.length;
+  $('plates').innerHTML=Array.from({length:D.pz.courses},(_,i)=>
+    '<span class="plate'+(i<D.cuts.length?' spent':'')+'"></span>').join('')+
+    '<span style="font-size:10px;color:var(--muted)">'+left+' course'+(left===1?'':'s')+' left</span>';
+  renderPie(null);
+  if(D.phase==='cutting')
+    $('caption').innerHTML=left>0
+      ?'Drag around the rim to cut a wedge <span class="rosey">&mdash; or set two fingers on the pie.</span>'
+      :'The kitchen is closed. Name the palate.';
+  $('serveBtn').hidden=true;
+  renderPub();
+  $('docket').innerHTML=docket.map(k=>'<span class="dk '+k+'"></span>').join('');
+}
+/* ---- pie drawing ---- */
+const CX=165,CY=165,R=150;
+const rad=d=>(d-90)*Math.PI/180;
+const PX=(ang,r)=>CX+r*Math.cos(rad(ang));
+const PY=(ang,r)=>CY+r*Math.sin(rad(ang));
+function wedgePath(a0,a1,r,cx,cy){ // a0->a1 clockwise degrees
+  cx=cx==null?CX:cx;cy=cy==null?CY:cy;
+  const large=((a1-a0+360)%360)>180?1:0;
+  return 'M'+cx+','+cy+' L'+(cx+r*Math.cos(rad(a0)))+','+(cy+r*Math.sin(rad(a0)))+
+    ' A'+r+','+r+' 0 '+large+' 1 '+(cx+r*Math.cos(rad(a1)))+','+(cy+r*Math.sin(rad(a1)))+' Z';
+}
+/* deterministic topping spots per sector */
+const SPOTS=[[0.5],[0.3,0.7],[0.2,0.5,0.8]];
+function toppingsSVG(shift){
+  let s='';
+  const pie=D.pz.pie;
+  for(let sec=0;sec<SECT;sec++){
+    const a0=sec*30;
+    const off=shift&&shift.set.has(sec)?shift:null;
+    const dx=off?off.dx:0, dy=off?off.dy:0;
+    const nC=pie.c[sec],nA=pie.a[sec];
+    if(nC>0)for(let k=0;k<nC;k++){
+      const ang=a0+30*SPOTS[nC-1][k];
+      s+='<circle cx="'+(PX(ang,R*0.56)+dx)+'" cy="'+(PY(ang,R*0.56)+dy)+
+        '" r="7" fill="#c94f4f" stroke="#7e2f2f" stroke-width="1.5"/>'+
+        '<circle cx="'+(PX(ang,R*0.56)+dx-2)+'" cy="'+(PY(ang,R*0.56)+dy-2.5)+'" r="2" fill="#e89a9a"/>';
+    }
+    if(nA>0)for(let k=0;k<nA;k++){
+      const ang=a0+30*SPOTS[nA-1][k];
+      s+='<ellipse cx="'+(PX(ang,R*0.82)+dx)+'" cy="'+(PY(ang,R*0.82)+dy)+
+        '" rx="8" ry="5" transform="rotate('+(ang+20)+' '+(PX(ang,R*0.82)+dx)+' '+(PY(ang,R*0.82)+dy)+
+        ')" fill="#d8b56a" stroke="#8f7136" stroke-width="1.3"/>';
+    }
+  }
+  return s;
+}
+/* draw pie; drag = {a,b} live notches; taken = {i,len,side} result */
+function renderPie(drag){
+  let s='';
+  const taken=D.phase==='served'?D.lastResult:null;
+  // base cake
+  s+='<circle cx="'+CX+'" cy="'+CY+'" r="'+R+'" fill="#efdcb8" stroke="#b98d5e" stroke-width="7"/>';
+  // sector score lines
+  for(let k=0;k<SECT;k++)
+    s+='<line x1="'+CX+'" y1="'+CY+'" x2="'+PX(k*30,R)+'" y2="'+PY(k*30,R)+
+      '" stroke="#b98d5e" stroke-width="1" opacity="0.35"/>';
+  // wedge separation when served
+  let shift=null;
+  if(taken&&taken.side!==0){
+    const c=taken.cut;
+    const wedgeSecs=new Set();for(let k=0;k<c.len;k++)wedgeSecs.add((c.i+k)%SECT);
+    const secs=taken.side===1?wedgeSecs:new Set([...Array(SECT).keys()].filter(x=>!wedgeSecs.has(x)));
+    const mid=taken.side===1?(c.i*30+c.len*15):(c.i*30+c.len*15+180);
+    shift={set:secs,dx:14*Math.cos(rad(mid)),dy:14*Math.sin(rad(mid))};
+    // redraw as two pieces: remainder + shifted piece
+    s='';
+    const a0=c.i*30,a1=(c.i+c.len)*30;
+    const other=taken.side===1?wedgePath(a1,a0,R):wedgePath(a0,a1,R);
+    const takenPath=taken.side===1
+      ?wedgePath(a0,a1,R,CX+shift.dx,CY+shift.dy)
+      :wedgePath(a1,a0,R,CX+shift.dx,CY+shift.dy);
+    s+='<path d="'+other+'" fill="#efdcb8" stroke="#b98d5e" stroke-width="6"/>';
+    s+='<path d="'+takenPath+'" fill="#f4e6c8" stroke="#d16d8a" stroke-width="4"/>';
+    for(let k=0;k<SECT;k++){
+      const inTaken=secs.has(k);
+      const dx=inTaken?shift.dx:0,dy=inTaken?shift.dy:0;
+      s+='<line x1="'+(CX+dx)+'" y1="'+(CY+dy)+'" x2="'+(PX(k*30,R)+dx)+'" y2="'+(PY(k*30,R)+dy)+
+        '" stroke="#b98d5e" stroke-width="1" opacity="0.3"/>';
+    }
+  }
+  s+=toppingsSVG(shift);
+  if(taken&&taken.side===0){
+    // shrug: both halves shimmer
+    const c=taken.cut,a0=c.i*30,a1=(c.i+c.len)*30;
+    s+='<path d="'+wedgePath(a0,a1,R)+'" fill="#d16d8a" opacity="0.14"/>';
+    s+='<line x1="'+PX(a0,R)+'" y1="'+PY(a0,R)+'" x2="'+CX+'" y2="'+CY+'" stroke="#d16d8a" stroke-width="3"/>'+
+       '<line x1="'+PX(a1,R)+'" y1="'+PY(a1,R)+'" x2="'+CX+'" y2="'+CY+'" stroke="#d16d8a" stroke-width="3"/>';
+  }
+  if(drag){
+    const a0=drag.a*30,a1=drag.b*30;
+    if(drag.a!==drag.b){
+      s+='<path d="'+wedgePath(a0,a1,R)+'" fill="#d16d8a" opacity="0.22"/>';
+      s+='<line x1="'+PX(a0,R)+'" y1="'+PY(a0,R)+'" x2="'+CX+'" y2="'+CY+'" stroke="#d16d8a" stroke-width="3.5"/>'+
+         '<line x1="'+PX(a1,R)+'" y1="'+PY(a1,R)+'" x2="'+CX+'" y2="'+CY+'" stroke="#d16d8a" stroke-width="3.5"/>';
+    }
+  }
+  // rim notches
+  for(let k=0;k<SECT;k++)
+    s+='<circle cx="'+PX(k*30,R)+'" cy="'+PY(k*30,R)+'" r="3" fill="#b98d5e"/>';
+  $('pie').innerHTML=s;
+}
+/* ---- gesture: one-finger arc drag, or two pointers ---- */
+const pointers=new Map();
+let anchor=null;
+function angleOf(ev){
+  const svg=$('pie'),rect=svg.getBoundingClientRect();
+  const x=(ev.clientX-rect.left)*330/rect.width-CX;
+  const y=(ev.clientY-rect.top)*330/rect.height-CY;
+  let a=Math.atan2(y,x)*180/Math.PI+90;
+  return ((a%360)+360)%360;
+}
+const snap=a=>Math.round(a/30)%12;
+function dragState(){
+  const ps=[...pointers.values()];
+  if(ps.length===0)return null;
+  if(ps.length===1)return anchor==null?null:{a:anchor,b:snap(ps[0])};
+  return {a:snap(ps[0]),b:snap(ps[1])};
+}
+function canCut(){return D&&D.phase==='cutting'&&D.pz.courses-D.cuts.length>0;}
+$('pie').addEventListener('pointerdown',ev=>{
+  if(!canCut())return;
+  ev.preventDefault();
+  $('pie').setPointerCapture&&$('pie').setPointerCapture(ev.pointerId);
+  pointers.set(ev.pointerId,angleOf(ev));
+  if(pointers.size===1)anchor=snap(angleOf(ev));
+  renderPie(dragState());
+});
+$('pie').addEventListener('pointermove',ev=>{
+  if(!pointers.has(ev.pointerId))return;
+  ev.preventDefault();
+  pointers.set(ev.pointerId,angleOf(ev));
+  renderPie(dragState());
+});
+function endPointer(ev){
+  if(!pointers.has(ev.pointerId))return;
+  const st=dragState();
+  pointers.delete(ev.pointerId);
+  if(pointers.size===0){
+    anchor=null;
+    if(st&&canCut()){
+      const len=((st.b-st.a)+SECT)%SECT;
+      if(len>=1&&len<=11)commitCut({i:st.a,len});
+      else renderPie(null);
+    }else renderPie(null);
+  }
+}
+$('pie').addEventListener('pointerup',endPointer);
+$('pie').addEventListener('pointercancel',endPointer);
+
+function pieceWords(pie,i,len){
+  const c=wedgeCount(pie.c,i,len),a=wedgeCount(pie.a,i,len);
+  return len+' slice'+(len===1?'':'s')+', '+c+' cherr'+(c===1?'y':'ies')+', '+a+' almond'+(a===1?'':'s');
+}
+function commitCut(cut){
+  const side=outcome(D.pz.pie,cut,D.truth.w);
+  D.cuts.push(cut);
+  D.lastResult={cut,side};
+  D.phase='served';
+  renderAll();
+  renderPie(null);
+  const pie=D.pz.pie;
+  const w=pieceWords(pie,cut.i,cut.len);
+  const rest=pieceWords(pie,(cut.i+cut.len)%SECT,SECT-cut.len);
+  $('caption').innerHTML=side===1
+    ?'The guest takes <b>the wedge</b> <span class="rosey">('+w+')</span> and leaves the rest ('+rest+').'
+    :side===-1
+    ?'The guest waves the wedge away ('+w+') and takes <b>the rest</b> <span class="rosey">('+rest+')</span>.'
+    :'The guest <b>shrugs</b> &mdash; wedge or rest, it truly does not mind.';
+  // log row with mini pie
+  const row=document.createElement('div');row.className='row';
+  row.innerHTML=miniPie(cut,side)+'<span>course '+D.cuts.length+': '+
+    (side===1?'<span class="took">took the wedge</span>':side===-1?'<span class="took">took the rest</span>':'shrugged')+
+    ' &middot; wedge held '+w+'</span>';
+  $('log').appendChild(row);
+  const left=D.pz.courses-D.cuts.length;
+  $('serveBtn').hidden=left<=0;
+  if(left<=0)D.phase='cutting'; // nothing more to serve; publishing time
+}
+function miniPie(cut,side){
+  const r=13,cx=15,cy=15;
+  const a0=cut.i*30,a1=(cut.i+cut.len)*30;
+  const large=((a1-a0+360)%360)>180?1:0;
+  const p='M'+cx+','+cy+' L'+(cx+r*Math.cos(rad(a0)))+','+(cy+r*Math.sin(rad(a0)))+
+    ' A'+r+','+r+' 0 '+large+' 1 '+(cx+r*Math.cos(rad(a1)))+','+(cy+r*Math.sin(rad(a1)))+' Z';
+  const wedgeFill=side===1?'#d16d8a':'#3a2b3e';
+  const baseFill=side===-1?'#d16d8a':'#3a2b3e';
+  return '<svg width="30" height="30" viewBox="0 0 30 30">'+
+    '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+baseFill+'" stroke="#8d7f92" stroke-width="1"/>'+
+    '<path d="'+p+'" fill="'+wedgeFill+'" stroke="#8d7f92" stroke-width="1"/></svg>';
+}
+onTap($('serveBtn'),()=>{
+  if(D.phase!=='served')return;
+  D.phase='cutting';D.lastResult=null;
+  renderAll();
+});
+function renderPub(){
+  $('pub').innerHTML='';
+  D.guests.forEach((g,i)=>{
+    const b=document.createElement('button');
+    b.innerHTML='<span class="ptag">'+'ABC'[i]+'</span> it is <i>'+g.name+'</i>';
+    onTap(b,()=>publish(g.key));
+    $('pub').appendChild(b);
+  });
+  const nb=document.createElement('button');
+  nb.innerHTML='<span class="ptag">&empty;</span> no cut of this pie can tell them apart';
+  onTap(nb,()=>publish('NONID'));
+  $('pub').appendChild(nb);
+}
+const nameOf=key=>D.guests.find(g=>g.key===key).name;
+const letterOf=key=>'ABC'[D.guests.findIndex(g=>g.key===key)];
+function publish(claim){
+  const res=adjudicate(D.pz.pie,D.guests,D.truth,D.cuts,D.pz.courses,claim);
+  const head=$('vHead'),text=$('vText'),wd=$('vWithdrawn');
+  wd.classList.remove('show');wd.style.display='none';
+  let dk='no';
+  if(res.cat==='ACCEPT_GUEST'){
+    dk='ok';head.textContent='Named.';head.className='ok';
+    const X=res.used,Y=res.min;
+    if(X>Y)text.innerHTML='It is indeed <b>'+nameOf(claim)+'</b>. You needed '+X+' courses; a sharper knife needed <b>'+Y+'</b>.';
+    else text.innerHTML='It is indeed <b>'+nameOf(claim)+'</b> &mdash; named in <b>'+X+'</b> course'+(X===1?'':'s')+', the fewest possible.';
+  }else if(res.cat==='ACCEPT_NONID'){
+    dk='ok';head.textContent='Named.';head.className='ok';
+    text.innerHTML='Correct &mdash; and it is the pie’s fault, not yours. However you cut <b>this</b> pie, the remaining palates would always reach for the same piece. Where the data carry no variation, no appetite for truth can help. <b>Knowing the limit is knowledge.</b>';
+  }else if(res.cat==='ACCEPT_RETRACT'){
+    dk='rt';head.textContent='Named.';head.className='rt';
+    text.innerHTML='True: with the courses now gone, the remaining palates cannot be told apart.';
+    wd.style.display='block';
+    setTimeout(()=>{wd.classList.add('show');
+      text.innerHTML='But this pie could have told them apart &mdash; telling cuts existed all along. Your courses went to pieces every palate wanted alike. The dinner is over because you served it away.';
+    },1500);
+  }else if(res.cat==='REJECT_NOTYET'){
+    head.textContent='Refused.';head.className='no';
+    const other=res.surv.find(g=>g.key!==claim);
+    text.innerHTML='<b>'+nameOf(claim)+'</b> would indeed have chosen exactly so &mdash; but so would <b>'+
+      nameOf(other.key)+'</b> ('+letterOf(other.key)+'). A palate that fits is not a palate identified.';
+  }else if(res.cat==='REJECT_WRONG'){
+    head.textContent='Refused.';head.className='no';
+    text.innerHTML='The choices at this table contradict you. Still seated: '+
+      res.surv.map(g=>'<b>'+g.name+'</b>').join(', ')+'.';
+  }else if(res.cat==='REJECT_SOLVED'){
+    head.textContent='Refused.';head.className='no';
+    text.innerHTML='Cannot be told apart? The table has already spoken: only <b>'+res.surv[0].name+
+      '</b> ('+letterOf(res.surv[0].key)+') chooses like your guest. Look at who is left before ruling that no one can be.';
+  }else{
+    head.textContent='Refused.';head.className='no';
+    text.innerHTML='A telling cut of this pie still exists, and courses remain. No host may declare the dinner unknowable while the kitchen is open.';
+  }
+  docket.push(dk);
+  $('docket').innerHTML=docket.map(k=>'<span class="dk '+k+'"></span>').join('');
+  $('sheet').classList.add('show');
+}
+onTap($('vNext'),()=>newDinner());
+onTap($('vLook'),()=>{$('sheet').classList.remove('show');$('floatNew').classList.add('show');});
+onTap($('floatNew'),()=>newDinner());
+onTap($('wPlay'),()=>{$('welcome').classList.add('hidden');});
+newDinner();
+</script>
+</body>
+</html>
