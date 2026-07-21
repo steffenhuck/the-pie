@@ -656,11 +656,11 @@ const nameOf=key=>D.guests.find(g=>g.key===key).name;
 const letterOf=key=>'ABC'[D.guests.findIndex(g=>g.key===key)];
 /* the sharp knife's dinner: lay an optimal cut sequence under the log,
    with the guest's actual responses, using the same mini-pie language */
-function layKnife(witness){
+function layKnife(witness,headline){
   if(!witness||!witness.length)return;
   const h=document.createElement('div');h.className='row sharp';
-  h.innerHTML='<span style="font-style:italic">the sharp knife’s dinner &mdash; '+
-    witness.length+' course'+(witness.length===1?'':'s')+':</span>';
+  h.innerHTML='<span style="font-style:italic">'+(headline||
+    'the sharp knife’s dinner &mdash; '+witness.length+' course'+(witness.length===1?'':'s')+':')+'</span>';
   $('log').appendChild(h);
   witness.forEach((cut,k)=>{
     const side=outcome(D.pie,cut,D.truth.w);
@@ -686,7 +686,8 @@ function publish(claim){
     const X=res.used,Y=res.min;
     let t='He is indeed <b>'+nameOf(claim)+'</b> &mdash; named in <b>'+X+'</b> course'+(X===1?'':'s')+'.';
     if(Y<X){t+=' A sharper knife needed <b>'+Y+'</b> &mdash; its dinner is laid beneath yours on the table.';layKnife(res.minCuts);}
-    else t+=' That is the fewest possible.';
+    else{t+=' That is the fewest possible &mdash; <b>the sharp knife was yours</b>.';
+      layKnife(res.minCuts,'the sharp knife’s dinner, '+Y+' course'+(Y===1?'':'s')+' &mdash; and the sharp knife was yours:');}
     if(Number.isFinite(res.solvedAt)&&X>res.solvedAt)
       t+=' The table was already decided after course '+res.solvedAt+' &mdash; the last '+(X-res.solvedAt)+' changed nothing.';
     text.innerHTML=t;
