@@ -141,7 +141,7 @@ footer a{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--m
       <p>A guest has come to dinner, and you have baked <b>identical pies</b> — cherries here, almonds there, cake everywhere. You know the guest is one of <b>three palates</b>, each precise to the point. You do not know which.</p>
       <p>Each course, cut one wedge: <b>drag a finger around the rim</b> — or set <b>two fingers</b> on the pie at once. A cut offers a choice &mdash; wedge against rest &mdash; and nothing reaches the table until you <b>put that choice to the guest</b>, so redraw as often as you like. Once served, he takes whichever piece he scores higher; if the pieces tie, he <b>shrugs</b> and you see that too.</p>
       <p>His choices are all you will ever learn — and the table keeps its own counsel: <b>no palate is marked off while you play</b>. The reckoning is yours; only the verdict shows who survived. Cut where the palates <span class="rosey">disagree</span> — a piece every palate would take teaches you nothing.</p>
-      <p>Early dinners keep the toppings tidy. Later ones <b>mingle them</b> — and a pie that looks busier may say <i>less</i>.</p>
+      <p>Some pies keep their toppings tidy; others <b>mingle them</b> — and a pie that looks busier may say <i>less</i>.</p>
       <p>When you are ready, <b>name the palate</b> — or rule that <b>no cut of this pie can tell the survivors apart</b>. A proven limit is worth as much as a naming. Haste is worth nothing; neither is surrender while a telling cut remains.</p>
       <p>Pies don’t keep. You have only so many courses.</p>
     </div>
@@ -299,11 +299,12 @@ function adjudicate(pie,guests,truth,cuts,courses,claim){
   return {cat:couldAtStart?'ACCEPT_RETRACT':'ACCEPT_NONID',surv};
 }
 /* guests: [wc, wa, ws] point scores */
+/* design rule (harness-enforced): no two guests may be proportional —
+   scale copies choose alike on every pie, and identical behaviour under
+   different names would test language, not cutting. */
 const GUESTS={
   GOURMAND:{w:[0,0,2],name:'The Gourmand',
     say:'Counts cake and cake alone: two points a slice. Toppings are beneath notice.'},
-  MODEST:{w:[0,0,1],name:'The Modest',
-    say:'Counts cake and cake alone: one point a slice. Toppings are beneath notice.'},
   SWEET:{w:[1,1,0],name:'The Sweet Tooth',
     say:'A point for every topping, cherry or almond alike. The cake itself bores him.'},
   CHERRY:{w:[2,1,1],name:'The Cherry Devotee',
@@ -324,13 +325,6 @@ const TEMPLATES7={
     params:{p0:[3,2],p3:[3,2]},
     make:o=>{const pat=[o.p0,3,3,o.p3,0,0,0,0,0,0,0,0];
       return {pie:{c:pat.slice(),a:pat.slice()},cast:['CHERRY','ALMOND','GOURMAND']};}
-  },
-  COPY:{ // proportional point-sheets: choices identify tastes only up to scale
-    params:{v:[0,1]},
-    make:o=>({pie:o.v===0
-        ?{c:[2,2,1,0,0,0,0,0,0,0,1,2],a:[0,0,0,1,2,2,2,1,0,0,0,0]}
-        :{c:[0,1,2,2,1,0,0,0,0,0,0,0],a:[0,0,0,0,0,1,2,2,2,1,0,0]},
-      cast:['GOURMAND','MODEST','SWEET']})
   },
   BANQUET:{ // no single cut splits all three: two courses are necessary
     params:{v:[0,1,2]},
@@ -399,9 +393,13 @@ let D=null,dinnerNo=0;
 const docket=[];
 function rand(a){return a[Math.floor(Math.random()*a.length)];}
 const BASICDINNERS=ALLDINNERS.filter(d=>!TEMPLATES7[d.tKey].adv);
+const ADVDINNERS=ALLDINNERS.filter(d=>TEMPLATES7[d.tKey].adv);
 function newDinner(){
   dinnerNo++;
-  const pz=rand(dinnerNo<=2?BASICDINNERS:ALLDINNERS); // toppings stay tidy for two dinners
+  // early dinners lean tidy, but a mingled pie may arrive at any time
+  const pz=dinnerNo<=2
+    ?(Math.random()<0.2?rand(ADVDINNERS):rand(BASICDINNERS))
+    :rand(ALLDINNERS);
   const guests=pz.guests.slice().sort(()=>Math.random()-0.5);
   D={pz,guests,truth:rand(guests),cuts:[],phase:'cutting', // cutting | served | done
      proposed:null,lastResult:null,revealed:false};
@@ -673,14 +671,7 @@ function publish(claim){
     else text.innerHTML='He is indeed <b>'+nameOf(claim)+'</b> &mdash; named in <b>'+X+'</b> course'+(X===1?'':'s')+', the fewest possible.';
   }else if(res.cat==='ACCEPT_NONID'){
     dk='ok';head.textContent='Named.';head.className='ok';
-    let scalePair=null;
-    for(let i=0;i<res.surv.length&&!scalePair;i++)for(let j=i+1;j<res.surv.length;j++)
-      if(!pairSep(D.pz.pie,res.surv[i].w,res.surv[j].w)&&proportional(res.surv[i].w,res.surv[j].w))
-        {scalePair=[res.surv[i],res.surv[j]];break;}
-    text.innerHTML=scalePair
-      ?'Correct &mdash; and here not even a better pie could save you. <b>'+scalePair[0].name+'</b> and <b>'+
-        scalePair[1].name+'</b> score every piece in proportion: one point-sheet is the other, rescaled. Choices reveal only the <i>order</i> of appetites, never their strength &mdash; the two would choose alike on <b>any pie ever baked</b>. <b>Knowing the limit is knowledge.</b>'
-      :'Correct &mdash; and it is the pie’s fault, not yours. However you cut <b>this</b> pie, the remaining palates would always reach for the same piece. Where the data carry no variation, no appetite for truth can help. <b>Knowing the limit is knowledge.</b>';
+    text.innerHTML='Correct &mdash; and it is the pie’s fault, not yours. However you cut <b>this</b> pie, the remaining palates would always reach for the same piece. Where the data carry no variation, no appetite for truth can help. <b>Knowing the limit is knowledge.</b>';
   }else if(res.cat==='ACCEPT_RETRACT'){
     dk='rt';head.textContent='Named.';head.className='rt';
     text.innerHTML='True: with the courses now gone, the remaining palates cannot be told apart.';
