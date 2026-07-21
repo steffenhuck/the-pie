@@ -208,15 +208,16 @@ const ALLCUTS=allCuts();
 function wedgeCount(arr,i,len){let s=0;for(let k=0;k<len;k++)s+=arr[(i+k)%SECT];return s;}
 const total=arr=>arr.reduce((x,y)=>x+y,0);
 const sgn=v=>v>0?1:v<0?-1:0;
-/* guest's verdict on a cut: utility(wedge) - utility(rest), sign only */
-function outcome(pie,cut,w){
-  const dC=2*wedgeCount(pie.c,cut.i,cut.len)-total(pie.c);
-  const dA=2*wedgeCount(pie.a,cut.i,cut.len)-total(pie.a);
-  const dS=2*cut.len-SECT;
-  return sgn(w[0]*dC+w[1]*dA+w[2]*dS);
+/* guest's verdict on a cut: utility(wedge) - utility(rest), sign only.
+   A guest is a utility over a piece's contents (C cherries, A almonds,
+   S slices) — linear point-sheets or richer palates alike; all integer. */
+function outcome(pie,cut,g){
+  const Cw=wedgeCount(pie.c,cut.i,cut.len),Aw=wedgeCount(pie.a,cut.i,cut.len);
+  const Ct=total(pie.c),At=total(pie.a);
+  return sgn(g.u(Cw,Aw,cut.len)-g.u(Ct-Cw,At-Aw,SECT-cut.len));
 }
 /* two guests are twins on this pie iff they choose alike at EVERY cut */
-function pairSep(pie,w1,w2){return ALLCUTS.some(c=>outcome(pie,c,w1)!==outcome(pie,c,w2));}
+function pairSep(pie,g1,g2){return ALLCUTS.some(c=>outcome(pie,c,g1)!==outcome(pie,c,g2));}
 /* proportional point-sheets choose alike on EVERY pie, not just this one:
    the sign of a scaled utility difference never moves. Detected exactly on
    integers via vanishing cross-products plus shared direction. */
@@ -226,21 +227,21 @@ function proportional(w1,w2){
   return w1.some((v,i)=>v*w2[i]>0);
 }
 function survivorsOf(pie,guests,truth,cuts){
-  return guests.filter(g=>cuts.every(c=>outcome(pie,c,g.w)===outcome(pie,c,truth.w)));
+  return guests.filter(g=>cuts.every(c=>outcome(pie,c,g)===outcome(pie,c,truth)));
 }
 /* worst-case adaptive courses to identify the truth up to twin-equivalence */
 function depthEff(pie,set){
   let allEq=true;
   for(let i=0;i<set.length&&allEq;i++)for(let j=i+1;j<set.length;j++)
-    if(pairSep(pie,set[i].w,set[j].w)){allEq=false;break;}
+    if(pairSep(pie,set[i],set[j])){allEq=false;break;}
   if(set.length<=1||allEq)return 0;
   let best=Infinity;
   const seen=new Set();
   for(const c of ALLCUTS){
-    const sig=set.map(g=>outcome(pie,c,g.w)).join(',');
+    const sig=set.map(g=>outcome(pie,c,g)).join(',');
     if(seen.has(sig))continue;seen.add(sig);
     const groups=new Map();
-    for(const g of set){const o=outcome(pie,c,g.w);if(!groups.has(o))groups.set(o,[]);groups.get(o).push(g);}
+    for(const g of set){const o=outcome(pie,c,g);if(!groups.has(o))groups.set(o,[]);groups.get(o).push(g);}
     if(groups.size<2)continue;
     let worst=0;
     for(const gr of groups.values())worst=Math.max(worst,depthEff(pie,gr));
@@ -254,7 +255,7 @@ function depthEff(pie,set){
 function minCutsSearch(pie,guests,truth,cap){
   const reps=[];const seen=new Set();
   for(const c of ALLCUTS){
-    const sig=guests.map(g=>outcome(pie,c,g.w)).join(',');
+    const sig=guests.map(g=>outcome(pie,c,g)).join(',');
     if(seen.has(sig))continue;seen.add(sig);reps.push(c);
   }
   let best=Infinity,bestCuts=null;
@@ -291,7 +292,7 @@ function adjudicate(pie,guests,truth,cuts,claim){
   }
   if(surv.length===1)return {cat:'REJECT_SOLVED',surv};
   for(let i=0;i<surv.length;i++)for(let j=i+1;j<surv.length;j++)
-    if(!pairSep(pie,surv[i].w,surv[j].w))return {cat:'ACCEPT_NONID',surv};
+    if(!pairSep(pie,surv[i],surv[j]))return {cat:'ACCEPT_NONID',surv};
   return {cat:'REJECT_PREMATURE',surv};
 }
 /* guests: [wc, wa, ws] point scores */
@@ -307,8 +308,17 @@ const GUESTS={
     say:'Two points a cherry, one an almond, one a slice of cake.'},
   ALMOND:{w:[1,2,1],name:'The Almond Devotee',
     say:'Two points an almond, one a cherry, one a slice of cake.'},
+  /* richer palates: utilities beyond any point-sheet, still integer-exact */
+  HARMONIST:{u:(C,A,S)=>-Math.abs(C-A),name:'The Harmonist',
+    say:'Craves balance: the nearer a piece comes to equal cherries and almonds, the better. Counts nothing else.'},
+  PURIST:{u:(C,A,S)=>Math.abs(C-A),name:'The Purist',
+    say:'Craves dominance: the wider the gap between a piece’s cherries and almonds, the better. Counts nothing else.'},
+  ASCETIC:{w:[0,0,-1],name:'The Ascetic',
+    say:'Eats like a bird: always reaches for the piece with fewer slices. Toppings are noise.'},
 };
-function guest(key){const g=GUESTS[key];return {key,w:g.w,name:g.name,say:g.say};}
+function guest(key){const g=GUESTS[key];
+  const u=g.u||((C,A,S)=>g.w[0]*C+g.w[1]*A+g.w[2]*S);
+  return {key,u,w:g.w||null,name:g.name,say:g.say};}
 /* dinner templates: finite parameter menus so the harness can sweep every
    table the game can ever set. depth (worst-case adaptive courses) is
    recorded for the benchmark; courses themselves are unlimited. */
@@ -319,9 +329,31 @@ const TEMPLATES7={
       cast:['GOURMAND','CHERRY','ALMOND']})
   },
   COLLINEAR:{ // cherries and almonds always together: the devotees are twins
-    params:{p0:[3,2],p3:[3,2]},
-    make:o=>{const pat=[o.p0,3,3,o.p3,0,0,0,0,0,0,0,0];
+    params:{p0:[3,2]},
+    make:o=>{const pat=[o.p0,3,3,3,0,0,0,0,0,0,0,0];
       return {pie:{c:pat.slice(),a:pat.slice()},cast:['CHERRY','ALMOND','GOURMAND']};}
+  },
+  BALANCE:{ // the Harmonist at table: balance can beat size
+    params:{v:[0,1]},
+    make:o=>({pie:o.v===0
+        ?{c:[3,2,1,0,0,0,1,0,0,0,0,0],a:[0,1,2,3,0,0,1,0,0,2,0,0]}
+        :{c:[2,2,1,0,0,0,2,0,0,0,0,0],a:[0,1,2,2,0,0,2,0,0,1,0,0]},
+      cast:['HARMONIST','SWEET','GOURMAND']})
+  },
+  DUEL:{ nodom:true, // Harmonist against Purist on an uneven pie: exact
+                     // mirrors — they never once agree, so no trap cut exists
+    params:{v:[0,1]},
+    make:o=>({pie:o.v===0
+        ?{c:[3,2,0,0,1,1,0,0,0,0,0,0],a:[0,1,3,0,1,1,0,0,0,2,0,0]}
+        :{c:[3,1,0,0,2,1,0,0,0,0,0,0],a:[0,2,3,0,1,1,0,0,0,1,0,0]},
+      cast:['HARMONIST','PURIST','GOURMAND']})
+  },
+  BIRD:{ // the Ascetic reaches for the smaller piece, whatever it holds
+    params:{v:[0,1]},
+    make:o=>({pie:o.v===0
+        ?{c:[3,2,0,0,0,0,0,0,0,0,1,2],a:[1,1,0,0,2,0,0,0,0,0,0,1]}
+        :{c:[2,3,0,0,0,1,0,0,0,0,0,0],a:[0,1,2,0,0,0,0,0,3,0,0,0]},
+      cast:['ASCETIC','SWEET','CHERRY']})
   },
   BANQUET:{ // no single cut splits all three: two courses are necessary
     params:{v:[0,1,2]},
@@ -353,6 +385,13 @@ const TEMPLATES7={
     make:o=>{const n=o.v===0?1:2,c=[],a=[];
       for(let s=0;s<SECT;s++){c.push(s%2?0:n);a.push(s%2?n:0);}
       return {pie:{c,a},cast:['CHERRY','ALMOND','SWEET']};}
+  },
+  ZEALOTS:{ adv:true, nodom:true, // the DUEL cast on a balanced pie: with
+    // every sector holding cherries and almonds alike, Harmonist and Purist
+    // both fall silent — the mirrors become twins, and nothing parts them
+    params:{v:[0,1]},
+    make:o=>{const pat=o.v===0?[2,2,1,1,0,0,0,0,0,0,0,0]:[3,1,0,2,0,0,0,0,0,0,0,0];
+      return {pie:{c:pat.slice(),a:pat.slice()},cast:['HARMONIST','PURIST','GOURMAND']};}
   },
 };
 /* a dealt pie is a rotation (and possibly a mirror) of a catalogue pie:
@@ -601,7 +640,7 @@ function pieceWords(pie,i,len){
 }
 function commitCut(cut){
   D.proposed=null;
-  const side=outcome(D.pie,cut,D.truth.w);
+  const side=outcome(D.pie,cut,D.truth);
   D.cuts.push(cut);
   D.lastResult={cut,side};
   D.phase='served';
@@ -669,7 +708,7 @@ function layKnife(witness,headline){
     'the sharp knife’s dinner &mdash; '+witness.length+' course'+(witness.length===1?'':'s')+':')+'</span>';
   $('log').appendChild(h);
   witness.forEach((cut,k)=>{
-    const side=outcome(D.pie,cut,D.truth.w);
+    const side=outcome(D.pie,cut,D.truth);
     const row=document.createElement('div');row.className='row sharp';
     row.innerHTML=miniPie(cut,side)+'<span>course '+(k+1)+': '+
       (side===1?'he takes the wedge':side===-1?'he takes the rest':'he shrugs')+
