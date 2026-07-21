@@ -673,15 +673,13 @@ function commitCut(cut){
     :'The guest <b>shrugs</b> &mdash; the wedge ('+w+') and the rest ('+rest+') please him exactly alike.';
   // log row with mini pie
   const row=document.createElement('div');row.className='row';
+  const taken=side===1?w:rest, refused=side===1?rest:w;
   row.innerHTML=miniPie(cut,side)+'<span>course '+D.cuts.length+': '+
-    (side===1
-      ?'<span class="took">took the wedge</span>: '+w+
-        '<br><span class="refused">refused the rest: '+rest+'</span>'
-      :side===-1
-      ?'<span class="took">took the rest</span>: '+rest+
-        '<br><span class="refused">refused the wedge: '+w+'</span>'
-      :'shrugged &mdash; wedge: '+w+
-        '<br><span class="refused">exactly equal to the rest: '+rest+'</span>')+'</span>';
+    (side!==0
+      ?'<span class="took">took</span> '+taken+
+        '<br><span class="refused">refused '+refused+'</span>'
+      :'shrugged between '+w+
+        '<br><span class="refused">and '+rest+' &mdash; exactly equal to him</span>')+'</span>';
   $('log').appendChild(row);
   $('serveBtn').hidden=false; // another identical pie always waits
 }
@@ -734,13 +732,12 @@ function layKnife(witness,headline){
     const side=outcome(D.pie,cut,D.truth);
     const w=pieceWords(D.pie,cut.i,cut.len);
     const rest=pieceWords(D.pie,(cut.i+cut.len)%SECT,SECT-cut.len);
+    const taken=side===1?w:rest, refused=side===1?rest:w;
     const row=document.createElement('div');row.className='row sharp';
     row.innerHTML=miniPie(cut,side)+'<span>course '+(k+1)+': '+
-      (side===1
-        ?'he takes the wedge: '+w+'<br><span class="refused">and refuses the rest: '+rest+'</span>'
-        :side===-1
-        ?'he takes the rest: '+rest+'<br><span class="refused">and refuses the wedge: '+w+'</span>'
-        :'he shrugs &mdash; wedge: '+w+'<br><span class="refused">exactly equal to the rest: '+rest+'</span>')+'</span>';
+      (side!==0
+        ?'he takes '+taken+'<br><span class="refused">and refuses '+refused+'</span>'
+        :'he shrugs between '+w+'<br><span class="refused">and '+rest+' &mdash; exactly equal</span>')+'</span>';
     $('log').appendChild(row);
   });
 }
