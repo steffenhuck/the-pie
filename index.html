@@ -140,7 +140,8 @@ footer a{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--m
     <div class="prose">
       <p>A guest has come to dinner, and you have baked <b>identical pies</b> — cherries here, almonds there, cake everywhere. You know the guest is one of <b>three palates</b>, each precise to the point. You do not know which.</p>
       <p>Each course, cut one wedge: <b>drag a finger around the rim</b> — or set <b>two fingers</b> on the pie at once. A cut offers a choice &mdash; wedge against rest &mdash; and nothing reaches the table until you <b>put that choice to the guest</b>, so redraw as often as you like. Once served, he takes whichever piece he scores higher; if the pieces tie, he <b>shrugs</b> and you see that too.</p>
-      <p>His choices are all you will ever learn. Cut where the palates <span class="rosey">disagree</span> — a piece every palate would take teaches you nothing.</p>
+      <p>His choices are all you will ever learn — and the table keeps its own counsel: <b>no palate is marked off while you play</b>. The reckoning is yours; only the verdict shows who survived. Cut where the palates <span class="rosey">disagree</span> — a piece every palate would take teaches you nothing.</p>
+      <p>Early dinners keep the toppings tidy. Later ones <b>mingle them</b> — and a pie that looks busier may say <i>less</i>.</p>
       <p>When you are ready, <b>name the palate</b> — or rule that <b>no cut of this pie can tell the survivors apart</b>. A proven limit is worth as much as a naming. Haste is worth nothing; neither is surrender while a telling cut remains.</p>
       <p>Pies don’t keep. You have only so many courses.</p>
     </div>
@@ -331,6 +332,29 @@ const TEMPLATES7={
         {c:[3,3,2,2,0,0,0,0,0,0,0,0],a:[0,0,0,0,0,0,3,3,1,1,0,0]}][o.v],
       cast:['GOURMAND','SWEET','CHERRY']})
   },
+  /* ---- advanced pies: the toppings mingle. Dealt from the third dinner
+     on; a busier-looking pie may carry less information, not more. ---- */
+  MEDLEY:{ adv:true, // scattered and mingled: the telling cuts are rare
+    params:{v:[0,1]},
+    make:o=>({pie:o.v===0
+        ?{c:[1,0,2,0,0,1,0,2,0,1,0,0],a:[0,2,0,1,0,2,0,0,1,0,1,0]}
+        :{c:[0,2,0,1,0,2,0,0,1,0,1,0],a:[1,0,2,0,0,1,0,2,0,1,0,0]},
+      cast:['GOURMAND','CHERRY','ALMOND']})
+  },
+  WEAVE:{ adv:true, // interwoven runs: no single cut splits the table
+    params:{v:[0,1]},
+    make:o=>({pie:o.v===0
+        ?{c:[2,0,1,0,2,0,1,0,0,0,0,0],a:[0,1,0,2,0,1,0,2,0,0,0,0]}
+        :{c:[0,1,0,2,0,1,0,2,0,0,0,0],a:[2,0,1,0,2,0,1,0,0,0,0,0]},
+      cast:['SWEET','CHERRY','ALMOND']})
+  },
+  EVEN:{ adv:true, // the perfectly even pie: every wedge's toppings track its
+                   // cake, so every palate becomes a copy — nothing separates
+    params:{v:[0,1]},
+    make:o=>{const n=o.v===0?1:2,c=[],a=[];
+      for(let s=0;s<SECT;s++){c.push(s%2?0:n);a.push(s%2?n:0);}
+      return {pie:{c,a},cast:['CHERRY','ALMOND','SWEET']};}
+  },
 };
 function expandParams(menu){
   let combos=[{}];
@@ -366,12 +390,13 @@ const ALLDINNERS=enumerateAll7();
 let D=null,dinnerNo=0;
 const docket=[];
 function rand(a){return a[Math.floor(Math.random()*a.length)];}
+const BASICDINNERS=ALLDINNERS.filter(d=>!TEMPLATES7[d.tKey].adv);
 function newDinner(){
   dinnerNo++;
-  const pz=rand(ALLDINNERS);
+  const pz=rand(dinnerNo<=2?BASICDINNERS:ALLDINNERS); // toppings stay tidy for two dinners
   const guests=pz.guests.slice().sort(()=>Math.random()-0.5);
   D={pz,guests,truth:rand(guests),cuts:[],phase:'cutting', // cutting | served | done
-     proposed:null,lastResult:null};
+     proposed:null,lastResult:null,revealed:false};
   $('sheet').classList.remove('show');
   $('floatNew').classList.remove('show');
   $('log').innerHTML='';
@@ -379,8 +404,9 @@ function newDinner(){
 }
 function survNow(){return survivorsOf(D.pz.pie,D.guests,D.truth,D.cuts);}
 function renderAll(){
-  $('dinnerNo').textContent='dinner no. '+dinnerNo;
-  const surv=survNow();
+  $('dinnerNo').textContent='dinner no. '+dinnerNo+(TEMPLATES7[D.pz.tKey].adv?' · an advanced pie':'');
+  // hardcore: no palate is struck off while you play — only the verdict reveals
+  const surv=D.revealed?survNow():D.guests;
   // guests
   $('guests').innerHTML='';
   D.guests.forEach((g,i)=>{
@@ -627,6 +653,8 @@ const nameOf=key=>D.guests.find(g=>g.key===key).name;
 const letterOf=key=>'ABC'[D.guests.findIndex(g=>g.key===key)];
 function publish(claim){
   const res=adjudicate(D.pz.pie,D.guests,D.truth,D.cuts,D.pz.courses,claim);
+  D.revealed=true;
+  renderAll();
   const head=$('vHead'),text=$('vText'),wd=$('vWithdrawn');
   wd.classList.remove('show');wd.style.display='none';
   let dk='no';
