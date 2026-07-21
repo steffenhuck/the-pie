@@ -316,6 +316,13 @@ const GUESTS={
     say:'Counts a piece’s cherries against its almonds and craves lopsidedness: four-and-nought delights him, two-and-two leaves him cold. Cake counts for nothing.'},
   ASCETIC:{w:[0,0,-1],name:'The Ascetic',
     say:'Eats like a bird: always reaches for the piece with fewer slices. Toppings are noise.'},
+  /* fanatics: lexicographic palates — the favourite topping outweighs
+     everything; cake only breaks ties; the other topping never counts.
+     (1000 dwarfs any possible slice difference, so the order is exact.) */
+  FANCHERRY:{u:(C,A,S)=>1000*C+S,name:'The Cherry Fanatic',
+    say:'Cherries above everything: a single cherry outweighs all the cake on the table. Only between equal-cherried pieces does cake decide — and almonds never count.'},
+  FANALMOND:{u:(C,A,S)=>1000*A+S,name:'The Almond Fanatic',
+    say:'Almonds above everything: a single almond outweighs all the cake on the table. Only between equal-almonded pieces does cake decide — and cherries never count.'},
 };
 function guest(key){const g=GUESTS[key];
   const u=g.u||((C,A,S)=>g.w[0]*C+g.w[1]*A+g.w[2]*S);
@@ -355,6 +362,23 @@ const TEMPLATES7={
         ?{c:[3,2,0,0,0,0,0,0,0,0,1,2],a:[1,1,0,0,2,0,0,0,0,0,0,1]}
         :{c:[2,3,0,0,0,1,0,0,0,0,0,0],a:[0,1,2,0,0,0,0,0,3,0,0,0]},
       cast:['ASCETIC','SWEET','CHERRY']})
+  },
+  DEVOTION:{ // a devotee beside his own fanatic: same favourite, different
+             // creed — the devotee trades his love for bulk, the fanatic never
+    params:{v:[0,1,2,3]},
+    make:o=>{const t=[
+      {pie:{c:[3,3,1,0,0,0,0,0,0,0,0,0],a:[0,1,0,0,2,0,0,1,0,0,1,0]},cast:['CHERRY','FANCHERRY','GOURMAND']},
+      {pie:{c:[3,2,0,0,0,0,1,0,0,0,0,1],a:[0,0,2,0,1,0,0,0,2,0,0,0]},cast:['CHERRY','FANCHERRY','GOURMAND']},
+      {pie:{c:[0,1,0,0,2,0,0,1,0,0,1,0],a:[3,3,1,0,0,0,0,0,0,0,0,0]},cast:['ALMOND','FANALMOND','GOURMAND']},
+      {pie:{c:[0,0,2,0,1,0,0,0,2,0,0,0],a:[3,2,0,0,0,0,1,0,0,0,0,1]},cast:['ALMOND','FANALMOND','GOURMAND']}][o.v];
+      return {pie:t.pie,cast:t.cast};}
+  },
+  RIVALS:{ // the two fanatics at one table, blind to each other's topping
+    params:{v:[0,1]},
+    make:o=>({pie:o.v===0
+        ?{c:[3,2,0,0,0,1,0,0,0,0,0,0],a:[0,0,0,2,3,0,0,0,1,0,0,0]}
+        :{c:[0,0,0,2,3,0,0,0,1,0,0,0],a:[3,2,0,0,0,1,0,0,0,0,0,0]},
+      cast:['FANCHERRY','FANALMOND','SWEET']})
   },
   QUARTET:{ // a grand evening: four palates seated, all separable — but no
             // single cut splits four ways, so the order of cuts is the game
